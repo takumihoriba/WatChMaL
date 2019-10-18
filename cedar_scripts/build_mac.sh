@@ -114,7 +114,8 @@ if [ -z "${nuance}" ]; then
   EKth[e+]=0.264
   EKth[mu-]=54.6
   EKth[mu+]=54.6
-  EKth[gamma]="$(python -c "print(2*${EKth[e-]})")"
+  m_e=0.511
+  EKth[gamma]="$(python -c "print(2*(${m_e}+${EKth[e-]}))")"
   EKth[pi-]=72.1
   EKth[pi+]=72.1
   EKth[pi0]="$(python -c "print(2*${EKth[gamma]})")"
