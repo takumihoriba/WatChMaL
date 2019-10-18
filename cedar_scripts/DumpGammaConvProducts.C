@@ -42,6 +42,7 @@ void DumpGammaConvProducts(char * infile, char * outfile, int total, char * dir,
   int n=t->GetEntries();
   int N=0;
   std::ofstream out(outfile,std::ofstream::out);
+  double maxy = y, maxR = x;
   for(int i=0; i<n; i++){
     t->GetEntry(i);
     int gamma=-1;
@@ -77,9 +78,9 @@ void DumpGammaConvProducts(char * infile, char * outfile, int total, char * dir,
       continue;
     }
     if(!strcmp(pos, "unif")) {
-      double R=x*TMath::Sqrt(r->Uniform());
+      double R=maxR*TMath::Sqrt(r->Uniform());
       r->Circle(x,z,R);
-      y=r->Uniform(-y, y);
+      y=r->Uniform(-maxy, maxy);
     }
     if(!strcmp(dir, "2pi")){
       double angle = r->Uniform(TMath::Pi()*2);
