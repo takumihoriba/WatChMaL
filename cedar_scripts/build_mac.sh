@@ -121,6 +121,13 @@ if [ -z "${nuance}" ]; then
   EKth[pi0]="$(python -c "print(2*${EKth[gamma]})")"
   EkinMax="$(python -c "print(${Emax}+${EKth[${pid}]:-0})")"
   [ ! -z "${Emin}" ] && EkinMin="$(python -c "print(${Emin}+${EKth[${pid}]:-0})")"
+  if [ "${pid}" == "gamma" ]; then
+    generator="gamma-conversion"
+  else
+    generator="gps"
+  fi
+else
+  generator="muline"
 fi
 
 echo     "/run/verbose                           1"                    > "${file}"
@@ -140,19 +147,18 @@ echo     "/DarkRate/SetDarkMode                  1"                    >> "${fil
 echo     "/DarkRate/SetDarkHigh                  100000"               >> "${file}"
 echo     "/DarkRate/SetDarkLow                   0"                    >> "${file}"
 echo     "/DarkRate/SetDarkWindow                4000"                 >> "${file}"
+echo     "/mygen/generator                       $generator"           >> "${file}"
 if [ ! -z $nuance ]; then
-  echo   "/mygen/generator                       muline"               >> "${file}"
   echo   "/mygen/vecfile                         $nuance"              >> "${file}"
 else
-  echo   "/mygen/generator                       gps"                  >> "${file}"
   echo   "/gps/particle                          $pid"                 >> "${file}"
   if [ ! -z $Emin ]; then
     echo "/gps/ene/type                          Lin"                  >> "${file}"
     echo "/gps/ene/intercept                     1"                    >> "${file}"
-    echo "/gps/ene/min                           $EkinMin MeV"            >> "${file}"
-    echo "/gps/ene/max                           $EkinMax MeV"            >> "${file}"
+    echo "/gps/ene/min                           $EkinMin MeV"         >> "${file}"
+    echo "/gps/ene/max                           $EkinMax MeV"         >> "${file}"
   else
-    echo "/gps/energy                            $EkinMax MeV"            >> "${file}"
+    echo "/gps/energy                            $EkinMax MeV"         >> "${file}"
   fi
   if [ "$dir" == "fix" ]; then
     echo "/gps/direction                         $xdir $ydir $zdir"    >> "${file}"
