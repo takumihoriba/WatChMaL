@@ -68,12 +68,30 @@ class WCSim:
     def get_event_info(self):
         self.get_trigger(0)
         tracks = self.trigger.GetTracks()
-        # Single particle with flag -1 is the incoming neutrino or gamma
-        particles = [t for t in tracks if t.GetFlag() == -1]
-        # Check if it's the dummy neutrino from old gamma simulations:
-        if len(particles) == 1 and particles[0].GetIpnu() == 12 and particles[0].GetE() < 0.0001:
+        # Primary particles with no parent are the initial simulation
+        particles = [t for t in tracks if t.GetFlag() == 0 and t.GetParenttype() == 0]
+        # Check there is exactly one particle with no parent:
+        if len(particles) == 1:
+            # Only one primary, this is the particle being simulated
+            return {
+                "pid": particles[0].GetIpnu(),
+                "position": [particles[0].GetStart(i) for i in range(3)],
+                "direction": [particles[0].GetDir(i) for i in range(3)],
+                "energy": particles[0].GetE()
+            }
+        # Particle with flag -1 is the incoming neutrino or 'dummy neutrino' used for gamma
+        neutrino = [t for t in tracks if t.GetFlag() == -1]
+        # Check for dummy neutrino that actually stores a gamma
+        if len(neutrino) == 1 and neutrino[0].GetIpnu() == 22:
+            return {
+                "pid": 22,
+                "position": [neutrino[0].GetStart(i) for i in range(3)],
+                "direction": [neutrino[0].GetDir(i) for i in range(3)],
+                "energy": neutrino[0].GetE()
+            }
+        # Check for dummy neutrino from old gamma simulations that didn't save the gamma info
+        if len(neutrino) == 1 and neutrino[0].GetIpnu() == 12 and neutrino[0].GetE() < 0.0001:
             # Should be a positron/electron pair from a gamma simulation (temporary hack since no gamma truth saved)
-            particles = [t for t in tracks if t.GetFlag() == 0 and t.GetParenttype() == 0]
             if len(particles) == 2 and abs(particles[0].GetIpnu()) == 11 and abs(particles[1].GetIpnu()) == 11:
                 momentum = [sum(p.GetDir(i) * p.GetP() for p in particles) for i in range(3)]
                 norm = np.sqrt(sum(p ** 2 for p in momentum))
@@ -83,23 +101,11 @@ class WCSim:
                     "direction": [p / norm for p in momentum],
                     "energy": sum(p.GetE() for p in particles)
                 }
-        # Check there is exactly one particle with flag -1:
-        if len(particles) != 1:
-            # Look for one primary instead (flag 0 and parenttype 0)
-            particles = [t for t in tracks if t.GetFlag() == 0 and t.GetParenttype() == 0]
-        if len(particles) == 1:
-            # Only one primary, this is the particle being simulated
-            return {
-                "pid": particles[0].GetIpnu(),
-                "position": [particles[0].GetStart(i) for i in range(3)],
-                "direction": [particles[0].GetDir(i) for i in range(3)],
-                "energy": particles[0].GetE()
-            }
         # Otherwise something else is going on... guess info from the primaries
         momentum = [sum(p.GetDir(i) * p.GetP() for p in particles) for i in range(3)]
         norm = np.sqrt(sum(p ** 2 for p in momentum))
         return {
-            "pid": 0,  # there's more than one particle so use pid 0
+            "pid": 0,  # there's more than one particle so just use pid 0
             "position": [sum(p.GetStart(i) for p in particles)/len(particles) for i in range(3)],  # average position
             "direction": [p / norm for p in momentum],  # direction of sum of momenta
             "energy": sum(p.GetE() for p in particles)  # sum of energies
