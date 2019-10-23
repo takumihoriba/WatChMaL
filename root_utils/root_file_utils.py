@@ -94,15 +94,14 @@ class WCSim:
         # Check for dummy neutrino from old gamma simulations that didn't save the gamma info
         if isConversion and len(neutrino) == 1 and neutrino[0].GetIpnu() == 12 and neutrino[0].GetE() < 0.0001:
             # Should be a positron/electron pair from a gamma simulation (temporary hack since no gamma truth saved)
-            if :
-                momentum = [sum(p.GetDir(i) * p.GetP() for p in particles) for i in range(3)]
-                norm = np.sqrt(sum(p ** 2 for p in momentum))
-                return {
-                    "pid": 22,
-                    "position": [particles[0].GetStart(i) for i in range(3)],  # e+ / e- should have same position
-                    "direction": [p / norm for p in momentum],
-                    "energy": sum(p.GetE() for p in particles)
-                }
+            momentum = [sum(p.GetDir(i) * p.GetP() for p in particles) for i in range(3)]
+            norm = np.sqrt(sum(p ** 2 for p in momentum))
+            return {
+                "pid": 22,
+                "position": [particles[0].GetStart(i) for i in range(3)],  # e+ / e- should have same position
+                "direction": [p / norm for p in momentum],
+                "energy": sum(p.GetE() for p in particles)
+            }
         # Otherwise something else is going on... guess info from the primaries
         momentum = [sum(p.GetDir(i) * p.GetP() for p in particles) for i in range(3)]
         norm = np.sqrt(sum(p ** 2 for p in momentum))
