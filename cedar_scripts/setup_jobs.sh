@@ -72,7 +72,6 @@ echo "source \"${ROOTSYS}/bin/thisroot.sh\"" >> "$sourceme"
 echo "source \"$(readlink -f "${G4INSTALL}/../../../bin/geant4.sh")\"" >> "$sourceme"
 echo "source \"${G4INSTALL}/geant4make.sh\"" >> "$sourceme"
 echo "export G4WORKDIR=\"${G4WORKDIR}\"" >> "$sourceme"
-echo 'export WCSIMDIR="${G4WORKDIR}"' >> "$sourceme"
 echo "export DATATOOLS=\"${DATATOOLS}\"" >> "$sourceme"
 echo 'export LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+"$LD_LIBRARY_PATH:"}${G4LIB}/${G4SYSTEM}' >> "$sourceme"
 echo 'export PYTHONPATH=${PYTHONPATH:+"$PYTHONPATH:"}$DATATOOLS' >> "$sourceme"
@@ -82,6 +81,8 @@ echo "Compiling WCSim, source $PWD, destination $G4WORKDIR"
 make clean
 make rootcint
 make -j16
+echo 'export WCSIMDIR="${G4WORKDIR}"' >> "$sourceme"
+export WCSIMDIR="${G4WORKDIR}"
 cp -r macros "$G4WORKDIR"
 cp -r mPMT-configfiles "$G4WORKDIR"
 cp libWCSimRoot.so "$G4WORKDIR"
