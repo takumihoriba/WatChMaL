@@ -4,6 +4,7 @@
 # Options: -n nevents            number of events
 #          -s seed               WCSim random seed, default is set from SLURM_ARRAY_TASK_ID)
 #          -g geom               WCSim geometry default is nuPRISM_mPMT)
+#          -G Gd_doping          Gadolinium doping percent (default is 0)
 #          -r dark-rate          dark rate [kHz] (default is 0.1 kHz)
 #          -D DAQ_mac_file       WCSim daq mac file (default is [data_dir]/[name]/WCSim/macros/daq.mac
 #          -N NUANCE_input_file  input text file for NUANCE format event vectors
@@ -28,11 +29,13 @@ geom="nuPRISM_mPMT"
 darkrate=0.1
 daqfile="${WCSIMDIR}/macros/daq.mac"
 seed=${SLURM_ARRAY_TASK_ID}
-while getopts "n:s:g:r:D:N:E:e:P:p:x:y:z:R:d:u:v:w:i:f:FL" flag; do
+gad=0
+while getopts "n:s:g:G:r:D:N:E:e:P:p:x:y:z:R:d:u:v:w:i:f:FL" flag; do
   case $flag in
     n) nevents="${OPTARG}";;
     s) seed="${OPTARG}";;
     g) geom="${OPTARG}";;
+    G) gad="${OPTARG}";;
     r) darkrate="${OPTARG}";;
     D) daqfile="$(readlink -f "${OPTARG}")";;
     N) nuance="$(readlink -f "${OPTARG}")";;
@@ -135,6 +138,14 @@ echo     "/tracking/verbose                      0"                    >> "${fil
 echo     "/hits/verbose                          0"                    >> "${file}"
 echo     "/random/setSeeds                       $seed $seed"          >> "${file}"
 echo     "/WCSim/WCgeom                          $geom"                >> "${file}"
+if [ ! -z "${gad}" ]; then
+  if [ ! "$gad" == 0 ]; then
+    echo "/WCSim/DopedWater                      true"                 >> "${file}"
+    echo "/WCSim/DopingConcentration             $gad"                 >> "${file}"
+  else
+    echo "/WCSim/DopedWater                      false"                >> "${file}"
+  fi
+fi
 echo     "/WCSim/Construct"                                            >> "${file}"
 echo     "/WCSim/PMTQEMethod                     Stacking_Only"        >> "${file}"
 echo     "/WCSim/PMTCollEff                      on"                   >> "${file}"

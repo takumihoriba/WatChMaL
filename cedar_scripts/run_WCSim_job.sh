@@ -12,6 +12,7 @@
 # Options: -n nevents            number of events
 #          -s seed               WCSim random seed, default is set from SLURM_ARRAY_TASK_ID)
 #          -g geom               WCSim geometry default is nuPRISM_mPMT)
+#          -G Gd_doping          Percent Gd doping of water (default is 0)
 #          -r dark-rate          dark rate [kHz] (default is 0.1 kHz)
 #          -D DAQ_mac_file       WCSim daq mac file (default is [data_dir]/[name]/WCSim/macros/daq.mac
 #          -N NUANCE_input_file  input text file for NUANCE format event vectors
@@ -45,7 +46,7 @@ starttime="`date`"
 # Get positional parameters
 name="$1"
 data_dir="$(readlink -m "$2")"
-opts="n:s:g:r:D:N:E:e:P:p:x:y:z:R:d:u:v:w:i:FL"
+opts="n:s:g:G:r:D:N:E:e:P:p:x:y:z:R:d:u:v:w:i:FL"
 if [ -z "${name}" ] || [[ "${name}" == -[${opts//:}] ]]; then echo "Run name not set"; exit; fi
 if [ -z "${data_dir}" ] || [[ "${data_dir}" == -[${opts//:}]  ]]; then echo "Data directory not set"; exit; fi
 shift 2
@@ -63,6 +64,7 @@ while getopts "$opts" flag; do
     n) nevents="${OPTARG}";;
     s) seed="${OPTARG}";;
     g) geom="${OPTARG}";;
+    G) gad="${OPTARG}";;
     r) darkrate="${OPTARG}";;
     D) daqfile="$(readlink -f "${OPTARG}")";;
     N) nuance="$(readlink -f "${OPTARG}")";;
