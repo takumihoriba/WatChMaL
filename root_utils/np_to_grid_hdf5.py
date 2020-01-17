@@ -82,7 +82,6 @@ if __name__ == '__main__':
             first_trigger = np.argmin(trigger_time[i])
             module_index = pu.module_index(hit_pmt[i])
             wall_indices = np.where((hit_trigger[i]==first_trigger) & pu.is_barrel(module_index))
-            wall_indices = np.where(pu.is_barrel(module_index))
             pmt_in_module = pu.pmt_in_module_id(hit_pmt[i][wall_indices])
             wall_row, wall_col = pu.row_col(module_index[wall_indices])
             event_data = np.zeros((16, 40, 38))
