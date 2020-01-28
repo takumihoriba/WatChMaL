@@ -82,10 +82,8 @@ if __name__ == '__main__':
 
         for i in range(hit_pmt.shape[0]):
             first_trigger = np.argmin(trigger_time[i])
-            module_index = pu.module_index(hit_pmt[i])
-            wall_indices = np.where((hit_trigger[i] == first_trigger) & pu.is_barrel(module_index))
-            pmt_in_module = pu.pmt_in_module_id(hit_pmt[i][wall_indices])
-            wall_row, wall_col = pu.row_col(module_index[wall_indices])
+            wall_indices = np.where((hit_trigger[i] == first_trigger) & pu.is_barrel(hit_pmt[i]))
+            wall_row, wall_col = pu.row_col(wall_indices)
             event_data = np.zeros((75, 312, 2))
             event_data[wall_row, wall_col, 0] = hit_charge[i][wall_indices]
             event_data[wall_row, wall_col, 1] = hit_time[i][wall_indices]

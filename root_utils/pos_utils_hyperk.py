@@ -67,6 +67,6 @@ def row_col_rearranged(rearranged_barrel_index):
     return row, col
 
 
-def row_col(module_index):
+def row_col(pmt_index):
     """return row and column from a raw module index"""
-    return row_col_rearranged(rearrange_barrel_indices(module_index))
+    return row_col_rearranged(rearrange_barrel_indices(pmt_index))
