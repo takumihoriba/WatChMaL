@@ -48,7 +48,7 @@ if __name__ == '__main__':
     offset_next = 0
     label_map = {22: 0, 11: 1, 13: 2}
     for input_file in config.input_files:
-        npz_file = np.load(input_file)
+        npz_file = np.load(input_file, allow_pickle=True)
         event_id = npz_file['event_id']
         root_file = npz_file['root_file']
         pid = npz_file['pid']

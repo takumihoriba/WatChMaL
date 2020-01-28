@@ -50,7 +50,7 @@ if __name__ == '__main__':
     offset_next = 0
     label_map = {22: 0, 11: 1, 13: 2}
     for input_file in config.input_files:
-        npz_file = np.load(input_file)
+        npz_file = np.load(input_file, allow_pickle=True)
         event_id = npz_file['event_id']
         root_file = npz_file['root_file']
         pid = npz_file['pid']
@@ -82,7 +82,7 @@ if __name__ == '__main__':
 
         for i in range(hit_pmt.shape[0]):
             first_trigger = np.argmin(trigger_time[i])
-            wall_indices = np.where((hit_trigger[i] == first_trigger) & pu.is_barrel(hit_pmt[i]))
+            wall_indices = np.where((hit_trigger[i] == first_trigger) & pu.is_barrel(hit_pmt[i]))[0]
             wall_row, wall_col = pu.row_col(wall_indices)
             event_data = np.zeros((75, 312, 2))
             event_data[wall_row, wall_col, 0] = hit_charge[i][wall_indices]

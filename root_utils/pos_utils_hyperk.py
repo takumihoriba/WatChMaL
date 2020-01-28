@@ -48,12 +48,12 @@ def rearrange_barrel_indices(pmt_index):
     row_in_3rows = np.zeros_like(pmt_index)
     row_in_3rows[barrel_bulk_indices] = pmt_index[barrel_bulk_indices] % 3
     row_in_3rows[barrel_top_3rows_indices] = (pmt_index[barrel_top_3rows_indices] - 29988) % 3
-    row_in_3rows[barrel_bottom_3rows_indices] = (2-pmt_index[barrel_top_3rows_indices]) % 3
+    row_in_3rows[barrel_bottom_3rows_indices] = (2-pmt_index[barrel_bottom_3rows_indices]) % 3
 
     column_index = np.zeros_like(pmt_index)
     column_index[barrel_bulk_indices] = (pmt_index[barrel_bulk_indices]//3) % 312
     column_index[barrel_top_3rows_indices] = ((pmt_index[barrel_top_3rows_indices] - 29988) // 3) % 312
-    column_index[barrel_bottom_3rows_indices] = (pmt_index[barrel_bulk_indices]//3) % 312
+    column_index[barrel_bottom_3rows_indices] = (pmt_index[barrel_bottom_3rows_indices]//3) % 312
 
     rearranged_module_index = 312*(3*three_row_index + row_in_3rows) + column_index
 
