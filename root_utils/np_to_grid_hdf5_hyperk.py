@@ -2,7 +2,7 @@ import numpy as np
 import os
 import argparse
 import h5py
-import root_utils.pos_utils as pu
+import root_utils.pos_utils_hyperk as pu
 
 
 def get_args():
