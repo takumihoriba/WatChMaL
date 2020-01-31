@@ -33,7 +33,7 @@ if __name__ == '__main__':
                               shape=(total_rows,),
                               dtype=np.int32)
     dset_event_data=f.create_dataset("event_data",
-                                     shape=(total_rows, 27, 110, 38),
+                                     shape=(total_rows, 27, 27, 38),
                                      dtype=np.float32)
     dset_energies=f.create_dataset("energies",
                                    shape=(total_rows, 1),
@@ -88,7 +88,7 @@ if __name__ == '__main__':
             event_data = np.zeros((27, 110, 38))
             event_data[wall_row, wall_col, pmt_in_module] = hit_charge[i][wall_indices]
             event_data[wall_row, wall_col, pmt_in_module + 19] = hit_time[i][wall_indices]
-            dset_event_data[offset+i,:] = event_data
+            dset_event_data[offset+i,:] = np.roll(event_data, 13, axis=1)[:, 0:27, :]
 
         offset = offset_next
     f.close()
