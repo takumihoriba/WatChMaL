@@ -11,6 +11,7 @@
 #          -E fixed_or_max_Evis  fixed or maximum visible energy [MeV]
 #         [-e min_Evis]          minimum visible energy [MeV]
 #          -P particle_type      particle type
+#          -o orientation        orientation of axis of tank (default is "y")
 #          -p pos_type           position type [fix|unif]
 #         [-x x_pos]             fixed x position (for pos_type=fix) [cm]
 #          -y y_pos              fixed y position (for pos_type=fix) or maximum half-y (for pos_type=unif) [cm]
@@ -30,7 +31,8 @@ darkrate=0.1
 daqfile="${WCSIMDIR}/macros/daq.mac"
 seed=${SLURM_ARRAY_TASK_ID}
 gad=0
-while getopts "n:s:g:G:r:D:N:E:e:P:p:x:y:z:R:d:u:v:w:i:f:FL" flag; do
+orient="y"
+while getopts "n:s:g:G:r:D:N:E:e:P:o:p:x:y:z:R:d:u:v:w:i:f:FL" flag; do
   case $flag in
     n) nevents="${OPTARG}";;
     s) seed="${OPTARG}";;
@@ -42,6 +44,7 @@ while getopts "n:s:g:G:r:D:N:E:e:P:p:x:y:z:R:d:u:v:w:i:f:FL" flag; do
     E) Emax="${OPTARG}";;
     e) Emin="${OPTARG}";;
     P) pid="${OPTARG}";;
+    o) orient="${OPTARG}";;
     p) pos="${OPTARG}";;
     x) xpos="${OPTARG}";;
     y) ypos="${OPTARG}";;
@@ -110,6 +113,21 @@ else
   fi
 fi
 
+case $orient in
+  y) rot1 = "1 0 0"
+     rot2 = "0 0 1"
+     ;;
+  x) rot1 = "0 1 0"
+     rot2 = "0 0 1"
+     ;;
+  z) rot1 = "1 0 0"
+     rot2 = "0 1 0"
+     ;;
+  *) echo "Unknown orientation"
+     exit 1
+     ;;
+esac
+
 if [ -z "${nuance}" ]; then
   # Calculate Ekin from Evis
   declare -A EKth
@@ -175,8 +193,8 @@ else
     echo "/gps/direction                         $xdir $ydir $zdir"    >> "${file}"
   elif [ "$dir" == "2pi" ]; then
     echo "/gps/ang/type                          iso"                  >> "${file}"
-    echo "/gps/ang/rot1                          1 0 0"                >> "${file}"
-    echo "/gps/ang/rot2                          0 0 1"                >> "${file}"
+    echo "/gps/ang/rot1                          $rot1"                >> "${file}"
+    echo "/gps/ang/rot2                          $rot2"                >> "${file}"
     echo "/gps/ang/mintheta                      90  deg"              >> "${file}"
     echo "/gps/ang/maxtheta                      90  deg"              >> "${file}"
     echo "/gps/ang/minphi                        0   deg"              >> "${file}"
@@ -187,8 +205,8 @@ else
   if [ "$pos" == "unif" ]; then
     echo "/gps/pos/type                          Volume"               >> "${file}"
     echo "/gps/pos/shape                         Cylinder"             >> "${file}"
-    echo "/gps/pos/rot1                          1 0 0"                >> "${file}"
-    echo "/gps/pos/rot2                          0 0 1"                >> "${file}"
+    echo "/gps/pos/rot1                          $rot1"                >> "${file}"
+    echo "/gps/pos/rot2                          $rot2"                >> "${file}"
     echo "/gps/pos/radius                        $rpos cm"             >> "${file}"
     echo "/gps/pos/halfz                         $ypos cm"             >> "${file}"
   else

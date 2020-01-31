@@ -19,6 +19,7 @@
 #          -E fixed_or_max_Evis  fixed or maximum visible energy [MeV]
 #         [-e min_Evis]          minimum visible energy [MeV]
 #          -P particle_type      particle type
+#          -o orientation        orientation of tank axis (default is "y")
 #          -p pos_type           position type [fix|unif]
 #         [-x x_pos]             fixed x position (for pos_type=fix) [cm]
 #          -y y_pos              fixed y position (for pos_type=fix) or maximum half-y (for pos_type=unif) [cm]
@@ -46,7 +47,7 @@ starttime="`date`"
 # Get positional parameters
 name="$1"
 data_dir="$(readlink -m "$2")"
-opts="n:s:g:G:r:D:N:E:e:P:p:x:y:z:R:d:u:v:w:i:FL"
+opts="n:s:g:G:r:D:N:E:e:P:o:p:x:y:z:R:d:u:v:w:i:FL"
 if [ -z "${name}" ] || [[ "${name}" == -[${opts//:}] ]]; then echo "Run name not set"; exit; fi
 if [ -z "${data_dir}" ] || [[ "${data_dir}" == -[${opts//:}]  ]]; then echo "Data directory not set"; exit; fi
 shift 2
@@ -57,6 +58,7 @@ seed=${SLURM_ARRAY_TASK_ID}
 geom="nuPRISM_mPMT"
 darkrate=0.1
 daqfile="${WCSIMDIR}/macros/daq.mac"
+orient="y"
 
 # Get options
 while getopts "$opts" flag; do
@@ -71,6 +73,7 @@ while getopts "$opts" flag; do
     E) Emax="${OPTARG}";;
     e) Emin="${OPTARG}";;
     P) pid="${OPTARG}";;
+    o) orient="${OPTARG}";;
     p) pos="${OPTARG}";;
     x) xpos="${OPTARG}";;
     y) ypos="${OPTARG}";;
