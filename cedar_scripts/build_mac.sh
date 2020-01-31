@@ -114,14 +114,14 @@ else
 fi
 
 case $orient in
-  y) rot1 = "1 0 0"
-     rot2 = "0 0 1"
+  y) rot1="1 0 0"
+     rot2="0 0 1"
      ;;
-  x) rot1 = "0 1 0"
-     rot2 = "0 0 1"
+  x) rot1="0 1 0"
+     rot2="0 0 1"
      ;;
-  z) rot1 = "1 0 0"
-     rot2 = "0 1 0"
+  z) rot1="1 0 0"
+     rot2="0 1 0"
      ;;
   *) echo "Unknown orientation"
      exit 1
