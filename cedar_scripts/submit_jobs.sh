@@ -5,13 +5,13 @@
 set -e
 
 # initial environment setup
-export DATATOOLS=/project/rpp-tanaka-ab/machine_learning/production_software/DataTools
+export DATATOOLS=/project/rpp-blairt2k/machine_learning/production_software/DataTools
 cd $DATATOOLS/cedar_scripts
 source sourceme.sh
 
 # name and output data directory for this run
 name=IWCDmPMT_test
-data_dir=/project/rpp-tanaka-ab/machine_learning/data
+data_dir=/project/rpp-blairt2k/machine_learning/data
 
 # Run setup scripts
 source setup_jobs.sh "$name" "$data_dir"
