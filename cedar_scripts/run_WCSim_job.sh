@@ -158,76 +158,27 @@ fi
 fullname="${directory}/${filename}"
 
 # Get args to pass to build_mac.sh
-# For gammas, set position to (0,0,0) and double number of events, to simulate enough gamma conversions
-# ^ no longer needed, if using new special gamma-conversion generator in WCSim
-args=()
-#if [ "${pid}" == "gamma" ]; then
-#  gamma_conv="/gamma-conversion"
-#  for arg in "$@"; do
-#    if [[ "${skip}" == 1 ]]; then
-#      unset skip
-#    elif [ "${arg}" == "-p" ]; then
-#      args+=( "-p" "fix" )
-#      skip=1
-#    elif [ "${arg}" == "-n" ]; then
-#      nevents2="$(python -c "print(${nevents}*2)")"
-#      args+=( "-n" "${nevents2}" )
-#      skip=1
-#    elif [[ "${arg}" == "-[xyzR]" ]]; then
-#      args+=( "${arg}" 0 )
-#      skip=1
-#    else
-#      args+=( "${arg}" )
-#    fi
-#  done
-#else
-  gamma_conv=""
-  args=( "$@" )
-#fi
+args=( "$@" )
 
 LOGDIR=${LOGDIR:-"/scratch/${USER}/log/${name}"}
 logfile="/dev/null"
 
 # Create mac file
-macfile="${data_dir}/mac${gamma_conv}/${fullname}.mac"
-rootfile="${data_dir}/WCSim${gamma_conv}/${fullname}.root"
+macfile="${data_dir}/mac/${fullname}.mac"
+rootfile="${data_dir}/WCSim/${fullname}.root"
 mkdir -p "$(dirname "${macfile}")"
 echo "[`date`] Creating mac file ${macfile}"
 "$DATATOOLS/cedar_scripts/build_mac.sh" "${args[@]}" -f "${rootfile}" "${macfile}"
 
 # Run WCSim
-[ ! -z "$logs" ] && logfile="${LOGDIR}/WCSim${gamma_conv}/${fullname}.log"
+[ ! -z "$logs" ] && logfile="${LOGDIR}/WCSim/${fullname}.log"
 echo "[`date`] Running WCSim on ${macfile} output to ${rootfile} log to ${logfile}"
 mkdir -p "$(dirname "${rootfile}")"
 mkdir -p "$(dirname "${logfile}")"
 cd ${WCSIMDIR}
 "${G4WORKDIR}/bin/${G4SYSTEM}/WCSim" "${macfile}" &> "${logfile}"
 
-# For gammas, dump gamma conversion results to nuance file and run on that
-# ^ no longer needed, if using new special gamma-conversion generator in WCSim
-#if [ "${pid}" == "gamma" ]; then
-#  nuancefile="${data_dir}/nuance/${fullname}.txt"
-#  mkdir -p "$(dirname "${nuancefile}")"
-#  posargs="\"${pos}\", ${xpos}${rpos}, ${ypos}, ${zpos:-0}"
-#  echo "[`date`] Dumping gamma conversion products to ${nuancefile}"
-#  root -l -b -q "$DATATOOLS/cedar_scripts/DumpGammaConvProducts.C+(\"${rootfile/.root/_flat.root}\", \"${nuancefile}\", ${nevents}, \"${dir}\", ${posargs})"
-#
-#  # Create mac file
-#  macfile="${data_dir}/mac/nuance/${fullname}.mac"
-#  rootfile="${data_dir}/WCSim/${fullname}.root"
-#  mkdir -p "$(dirname "${macfile}")"
-#  echo "[`date`] Creating mac file ${macfile}"
-#  "${DATATOOLS}/cedar_scripts/build_mac.sh" -n "${nevents}" -s "${seed}" -g "${geom}" -r "${darkrate}" -D "${daqfile}" -N "${nuancefile}" -f "${rootfile}" "${macfile}"
-#
-#  # Run WCSim
-#  [ ! -z "$logs" ] && logfile="${LOGDIR}/WCSim/${fullname}.log"
-#  echo "[`date`] Running WCSim on ${macfile} output to ${rootfile} log to ${logfile}"
-#  mkdir -p "$(dirname "${rootfile}")"
-#  mkdir -p "$(dirname "${logfile}")"
-#  cd ${WCSIMDIR}
-#  "${G4WORKDIR}/bin/${G4SYSTEM}/WCSim" "${macfile}" &> "${logfile}"
-#fi
-
+# Convert to npz format
 npzfile="${data_dir}/numpy/${fullname}.npz"
 [ ! -z "$logs" ] && logfile="${LOGDIR}/numpy/${fullname}.log"
 mkdir -p "$(dirname "${npzfile}")"
@@ -235,6 +186,7 @@ mkdir -p "$(dirname "${logfile}")"
 echo "[`date`] Converting to numpy file ${npzfile} log to ${logfile}"
 python "$DATATOOLS/root_utils/event_dump.py" "${rootfile}" -d "${data_dir}/numpy/${directory}" &> "${logfile}"
 
+# Run fiTQun
 if [ ! -z "${runfiTQun}" ]; then
   echo "[`date`] Running fiTQun on ${rootfile}"
   fitqunfile="${data_dir}/fiTQun/${fullname}.fiTQun.root"
