@@ -163,9 +163,11 @@ args=( "$@" )
 LOGDIR=${LOGDIR:-"/scratch/${USER}/log/${name}"}
 logfile="/dev/null"
 
+tmp_dir="${SLURM_TMPDIR:-$data_dir}"
+
 # Create mac file
 macfile="${data_dir}/mac/${fullname}.mac"
-rootfile="${data_dir}/WCSim/${fullname}.root"
+rootfile="${tmp_dir}/WCSim/${fullname}.root"
 mkdir -p "$(dirname "${macfile}")"
 echo "[`date`] Creating mac file ${macfile}"
 "$DATATOOLS/cedar_scripts/build_mac.sh" "${args[@]}" -f "${rootfile}" "${macfile}"
@@ -179,22 +181,27 @@ cd ${WCSIMDIR}
 "${G4WORKDIR}/bin/${G4SYSTEM}/WCSim" "${macfile}" &> "${logfile}"
 
 # Convert to npz format
-npzfile="${data_dir}/numpy/${fullname}.npz"
+npzdir="${tmp_dir}/numpy/${directory}"
 [ ! -z "$logs" ] && logfile="${LOGDIR}/numpy/${fullname}.log"
-mkdir -p "$(dirname "${npzfile}")"
+mkdir -p "${npzdir}"
 mkdir -p "$(dirname "${logfile}")"
-echo "[`date`] Converting to numpy file ${npzfile} log to ${logfile}"
-python "$DATATOOLS/root_utils/event_dump.py" "${rootfile}" -d "${data_dir}/numpy/${directory}" &> "${logfile}"
+echo "[`date`] Converting to numpy file ${npzdir}/${filename}.npz log to ${logfile}"
+python "$DATATOOLS/root_utils/event_dump.py" "${rootfile}" -d "${npzdir}" &> "${logfile}"
 
 # Run fiTQun
 if [ ! -z "${runfiTQun}" ]; then
   echo "[`date`] Running fiTQun on ${rootfile}"
-  fitqunfile="${data_dir}/fiTQun/${fullname}.fiTQun.root"
+  fitqunfile="${tmp_dir}/fiTQun/${fullname}.fiTQun.root"
   [ ! -z "$logs" ] && logfile="${LOGDIR}/fiTQun/${fullname}.log"
   mkdir -p "$(dirname "${fitqunfile}")"
   mkdir -p "$(dirname "${logfile}")"
   echo "running fiTQun not yet available!"
 #  runfiTQun.sh "${rootfile}" ${nevents} &> "${logfile}"
+fi
+
+if [ ! "${tmp_dir}" -ef "${data_dir}" ]; then
+  echo "[`date`] Copying from temp dir ${tmp_dir} to ${data_dir}"
+  rsync -r "${tmp_dir}/" "${data_dir}/"
 fi
 
 endtime="`date`"
