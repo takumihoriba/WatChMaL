@@ -21,18 +21,17 @@
 #          -u x_dir              x direction (for dir_type=fix)
 #          -v y_dir              y direction (for dir_type=fix)
 #          -w z_dir              z direction (for dir_type=fix)
+#          -m                    turn off muon decay
 #          -f output_file.root   Output root file
 
 #for arg in "$@"; do
 #  echo $arg
 #done
 geom="nuPRISM_mPMT"
-darkrate=0.1
 daqfile="${WCSIMDIR}/macros/daq.mac"
 seed=${SLURM_ARRAY_TASK_ID}
-gad=0
 orient="y"
-while getopts "n:s:g:G:r:D:N:E:e:P:o:p:x:y:z:R:d:u:v:w:i:f:FL" flag; do
+while getopts "n:s:g:G:r:D:N:E:e:P:o:p:x:y:z:R:d:u:v:w:i:f:mFL" flag; do
   case $flag in
     n) nevents="${OPTARG}";;
     s) seed="${OPTARG}";;
@@ -56,6 +55,7 @@ while getopts "n:s:g:G:r:D:N:E:e:P:o:p:x:y:z:R:d:u:v:w:i:f:FL" flag; do
     w) zdir="${OPTARG}";;
     i) procs+=("${OPTARG}");;
     f) rootfile="$(readlink -m "${OPTARG}")";;
+    m) nomichel=1
   esac
 done
 shift $((OPTIND - 1))
@@ -63,7 +63,6 @@ file="$(readlink -m "$1")"
 if [ -z $nevents ]; then echo "Number of events not set"; exit 1; fi
 if [ -z $seed ]; then echo "Random seed not set"; exit 1; fi
 if [ -z $geom ]; then echo "Geometry not set"; exit 1; fi
-if [ -z $darkrate ]; then echo "Dark rate not set"; exit 1; fi
 if [ -z $daqfile ]; then echo "DAQ mac file not set"; exit 1; fi
 if [ -z $rootfile ]; then echo "Root file not set"; exit 1; fi
 if [ -z $file ]; then echo "Output mac file name not set"; exit 1; fi
@@ -171,11 +170,21 @@ echo     "/WCSim/SavePi0                         false"                >> "${fil
 echo     "/DAQ/Digitizer                         SKI"                  >> "${file}"
 echo     "/DAQ/Trigger                           NDigits"              >> "${file}"
 echo     "/control/execute                       $daqfile"             >> "${file}"
-echo     "/DarkRate/SetDarkRate                  $darkrate kHz"        >> "${file}"
-echo     "/DarkRate/SetDarkMode                  1"                    >> "${file}"
-echo     "/DarkRate/SetDarkHigh                  100000"               >> "${file}"
-echo     "/DarkRate/SetDarkLow                   0"                    >> "${file}"
-echo     "/DarkRate/SetDarkWindow                4000"                 >> "${file}"
+if [ ! -z $darkrate ]; then
+  echo   "/DarkRate/SetDarkRate                  $darkrate kHz"        >> "${file}"
+  echo   "/DarkRate/SetDarkMode                  1"                    >> "${file}"
+  echo   "/DarkRate/SetDarkHigh                  100000"               >> "${file}"
+  echo   "/DarkRate/SetDarkLow                   0"                    >> "${file}"
+  echo   "/DarkRate/SetDarkWindow                4000"                 >> "${file}"
+fi
+for proc in "${procs[@]}" ; do
+  echo   "/process/inactivate                    ${proc}"              >> "${file}"
+done
+if [ "${nomichel}" == 1 ]; then
+  echo   "/particle/select                       mu-"                  >> "${file}"
+  echo   "/particle/process/inactivate           7"                    >> "${file}"
+  echo   "/particle/process/inactivate           8"                    >> "${file}"
+fi
 echo     "/mygen/generator                       $generator"           >> "${file}"
 if [ ! -z $nuance ]; then
   echo   "/mygen/vecfile                         $nuance"              >> "${file}"
@@ -213,9 +222,6 @@ else
     echo "/gps/position                          $xpos $ypos $zpos cm" >> "${file}"
   fi
 fi
-for proc in "${procs[@]}" ; do
-  echo   "/process/inactivate                    ${proc}"              >> "${file}"
-done
 echo     "/Tracking/fractionOpticalPhotonsToDraw 0.0"                  >> "${file}"
 echo     "/WCSimIO/RootFile                      $rootfile"            >> "${file}"
 echo     "/WCSimIO/SaveRooTracker                0"                    >> "${file}"

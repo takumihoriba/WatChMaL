@@ -29,6 +29,7 @@
 #          -u x_dir              x direction (for dir_type=fix)
 #          -v y_dir              y direction (for dir_type=fix)
 #          -w z_dir              z direction (for dir_type=fix)
+#          -m                    turn off muon decay
 #          -i process            Geant4 process to inactivate (can be used multiple times)
 #          -F                    also run fiTQun on output
 #          -L                    turn on extra logging (output of WCSim, numpy conversion, etc.)
@@ -47,7 +48,7 @@ starttime="`date`"
 # Get positional parameters
 name="$1"
 data_dir="$(readlink -m "$2")"
-opts="n:s:g:G:r:D:N:E:e:P:o:p:x:y:z:R:d:u:v:w:i:FL"
+opts="n:s:g:G:r:D:N:E:e:P:o:p:x:y:z:R:d:u:v:w:i:mFL"
 if [ -z "${name}" ] || [[ "${name}" == -[${opts//:}] ]]; then echo "Run name not set"; exit; fi
 if [ -z "${data_dir}" ] || [[ "${data_dir}" == -[${opts//:}]  ]]; then echo "Data directory not set"; exit; fi
 shift 2
@@ -84,6 +85,7 @@ while getopts "$opts" flag; do
     v) ydir="${OPTARG}";;
     w) zdir="${OPTARG}";;
     i) procs+=("${OPTARG}");;
+    m) nomichel=1;;
     F) run_fiTQun=1;;
     L) logs=1;;
   esac
