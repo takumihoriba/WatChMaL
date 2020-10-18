@@ -154,6 +154,7 @@ echo     "/run/verbose                           1"                    > "${file
 echo     "/tracking/verbose                      0"                    >> "${file}"
 echo     "/hits/verbose                          0"                    >> "${file}"
 echo     "/random/setSeeds                       $seed $seed"          >> "${file}"
+echo     "/WCSim/random/seed                     $seed"                >> "${file}"
 echo     "/WCSim/WCgeom                          $geom"                >> "${file}"
 if [ ! -z "${gad}" ]; then
   if [ ! "$gad" == 0 ]; then
