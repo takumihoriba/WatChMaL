@@ -179,6 +179,7 @@ mkdir -p "$(dirname "${rootfile}")"
 mkdir -p "$(dirname "${logfile}")"
 cd ${WCSIMDIR}
 "${G4WORKDIR}/bin/${G4SYSTEM}/WCSim" "${macfile}" &> "${logfile}"
+rm -f ${rootfile/.root/_flat.root}
 
 # Convert to npz format
 npzdir="${tmp_dir}/numpy/${directory}"
