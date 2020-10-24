@@ -59,6 +59,7 @@ def dump_file(infile, outfile):
     track_flag = np.empty(nevents, dtype=object)
 
     trigger_time = np.empty(nevents, dtype=object)
+    trigger_type = np.empty(nevents, dtype=object)
 
     for ev in range(wcsim.nevent):
         wcsim.get_event(ev)
@@ -93,7 +94,9 @@ def dump_file(infile, outfile):
         track_parent[ev] = tracks["parent"]
         track_flag[ev] = tracks["flag"]
 
-        trigger_time[ev] = wcsim.get_trigger_times()
+        triggers = wcsim.get_triggers()
+        trigger_time[ev] = triggers["time"]
+        trigger_type[ev] = triggers["type"]
 
         event_id[ev] = ev
         root_file[ev] = infile
@@ -123,7 +126,8 @@ def dump_file(infile, outfile):
                         track_stop_position=track_stop_position,
                         track_parent=track_parent,
                         track_flag=track_flag,
-                        trigger_time=trigger_time
+                        trigger_time=trigger_time,
+                        trigger_type=trigger_type
                         )
     del wcsim
 
