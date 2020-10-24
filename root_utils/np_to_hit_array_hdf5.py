@@ -22,30 +22,29 @@ if __name__ == '__main__':
     good_rows = 0
     good_hits = 0
     print("counting events and hits, in files")
-    file_event_hits = {}
-    file_good_events = {}
+    file_event_triggers = {}
     for input_file in config.input_files:
         print(input_file)
         if not os.path.isfile(input_file):
             raise ValueError(input_file+" does not exist")
         npz_file = np.load(input_file)
-        trigger_time = npz_file['trigger_time']
-        hit_trigger = npz_file['digi_hit_trigger']
-        total_rows += hit_trigger.shape[0]
-        event_hits = []
-        good_events = []
-        for i in range(hit_trigger.shape[0]):
-            first_trigger = np.argmin(trigger_time[i])
-            hits = np.where(hit_trigger[i]==first_trigger)
-            nhits = len(hits[0])
+        trigger_times = npz_file['trigger_time']
+        trigger_types = npz_file['trigger_type']
+        hit_triggers = npz_file['digi_hit_trigger']
+        total_rows += hit_triggers.shape[0]
+        event_triggers = np.full(hit_triggers.shape[0], np.nan)
+        for i, (times, types, hit_trigs) in enumerate(zip(trigger_times, trigger_types, hit_triggers)):
+            good_triggers = np.where(types==0)[0]
+            if len(good_triggers)==0:
+                continue
+            first_trigger = good_triggers[np.argmin(times[good_triggers])]
+            nhits = np.count_nonzero(hit_trigs==first_trigger)
             total_hits += nhits
             if nhits >= min_hits:
-                good_events.append(i)
-                event_hits.append(hits)
+                event_triggers[i] = first_trigger
                 good_hits += nhits
                 good_rows += 1
-        file_event_hits[input_file] = event_hits
-        file_good_events[input_file] = good_events
+        file_event_triggers[input_file] = event_triggers
     
     print(len(config.input_files), "files with", total_rows, "events with ", total_hits, "hits")
     print(good_rows, "events with at least", min_hits, "hits for a total of", good_hits, "hits")
@@ -88,41 +87,42 @@ if __name__ == '__main__':
     for input_file in config.input_files:
         print(input_file)
         npz_file = np.load(input_file, allow_pickle=True)
-        good_events = file_good_events[input_file]
-        hit_pmt = npz_file['digi_hit_pmt'][good_events]
-        event_id = npz_file['event_id'][good_events]
-        root_file = npz_file['root_file'][good_events]
-        pid = npz_file['pid'][good_events]
-        position = npz_file['position'][good_events]
-        direction = npz_file['direction'][good_events]
-        energy = npz_file['energy'][good_events]
-        hit_time = npz_file['digi_hit_time'][good_events]
-        hit_charge = npz_file['digi_hit_charge'][good_events]
-        hit_pmt = npz_file['digi_hit_pmt'][good_events]
+        good_events = ~np.isnan(file_event_triggers[input_file])
+        event_triggers = file_event_triggers[input_file][good_events]
+        event_ids = npz_file['event_id'][good_events]
+        root_files = npz_file['root_file'][good_events]
+        pids = npz_file['pid'][good_events]
+        positions = npz_file['position'][good_events]
+        directions = npz_file['direction'][good_events]
+        energies = npz_file['energy'][good_events]
+        hit_times = npz_file['digi_hit_time'][good_events]
+        hit_charges = npz_file['digi_hit_charge'][good_events]
+        hit_pmts = npz_file['digi_hit_pmt'][good_events]
+        hit_triggers = npz_file['digi_hit_trigger'][good_events]
 
-        offset_next += event_id.shape[0]
+        offset_next += event_ids.shape[0]
 
-        dset_IDX[offset:offset_next] = event_id
-        dset_PATHS[offset:offset_next] = root_file
-        dset_energies[offset:offset_next,:] = energy.reshape(-1,1)
-        dset_positions[offset:offset_next,:,:] = position.reshape(-1,1,3)
+        dset_IDX[offset:offset_next] = event_ids
+        dset_PATHS[offset:offset_next] = root_files
+        dset_energies[offset:offset_next,:] = energies.reshape(-1,1)
+        dset_positions[offset:offset_next,:,:] = positions.reshape(-1,1,3)
 
-        labels = np.full(pid.shape[0], -1)
+        labels = np.full(pids.shape[0], -1)
         for l, v in label_map.items():
-            labels[pid==l] = v
+            labels[pids==l] = v
         dset_labels[offset:offset_next] = labels
 
-        polar = np.arccos(direction[:,1])
-        azimuth = np.arctan2(direction[:,2], direction[:,0])
-        dset_angles[offset:offset_next,:] = np.hstack((polar.reshape(-1,1),azimuth.reshape(-1,1)))
+        polars = np.arccos(directions[:,1])
+        azimuths = np.arctan2(directions[:,2], directions[:,0])
+        dset_angles[offset:offset_next,:] = np.hstack((polars.reshape(-1,1),azimuths.reshape(-1,1)))
 
-        for i in range(hit_pmt.shape[0]):
+        for i, (trigs, times, charges, pmts) in enumerate(zip(hit_triggers, hit_times, hit_charges, hit_pmts)):
             dset_event_hit_index[offset+i] = hit_offset
-            hit_indices = file_event_hits[input_file][i]
-            hit_offset_next += len(hit_indices[0])
-            dset_hit_time[hit_offset:hit_offset_next] = hit_time[i][hit_indices]
-            dset_hit_charge[hit_offset:hit_offset_next] = hit_charge[i][hit_indices]
-            dset_hit_pmt[hit_offset:hit_offset_next] = hit_pmt[i][hit_indices]
+            hit_indices = np.where(trigs==event_triggers[i])[0]
+            hit_offset_next += len(hit_indices)
+            dset_hit_time[hit_offset:hit_offset_next] = times[hit_indices]
+            dset_hit_charge[hit_offset:hit_offset_next] = charges[hit_indices]
+            dset_hit_pmt[hit_offset:hit_offset_next] = pmts[hit_indices]
             hit_offset = hit_offset_next
 
         offset = offset_next
