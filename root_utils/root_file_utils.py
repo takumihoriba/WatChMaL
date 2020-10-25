@@ -174,35 +174,39 @@ class WCSim:
         trigger = []
         for t in range(self.ntrigger):
             self.get_trigger(t)
-            for hit in self.trigger.GetCherenkovHits():
-                pmt_id = hit.GetTubeID() - 1
-                for j in range(hit.GetTotalPe(0), hit.GetTotalPe(0)+hit.GetTotalPe(1)):
-                    pe = self.trigger.GetCherenkovHitTimes().At(j)
-                    try:  # Only works with new tracking branch of WCSim
-                        start_position.append([pe.GetPhotonStartPos(j)/10 for j in range(3)])
-                        end_position.append([pe.GetPhotonEndPos(j)/10 for j in range(3)])
-                        start_time.append(pe.GetPhotonStartTime())
-                    except AttributeError:
-                        start_position.append([0, 0, 0])
-                        end_position.append([0, 0, 0])
-                        start_time.append(0)
-                    end_time.append(pe.GetTruetime())
-                    track.append(pe.GetParentID())
-                    pmt.append(pmt_id)
-                    trigger.append(t)
+            n_photons = self.trigger.GetNcherenkovhittimes()
+            trigger.append(np.full(n_photons, t, dtype=np.int32))
+            counts = [h.GetTotalPe(1) for h in self.trigger.GetCherenkovHits()]
+            hit_pmts = [h.GetTubeID()-1 for h in self.trigger.GetCherenkovHits()]
+            pmt.append(np.repeat(hit_pmts, counts))
+            end_time.append(np.zeros(n_photons, dtype=np.float32))
+            track.append(np.zeros(n_photons, dtype=np.int32))
+            start_time.append(np.zeros(n_photons, dtype=np.float32))
+            start_position.append(np.zeros((n_photons, 3), dtype=np.float32))
+            end_position.append(np.zeros((n_photons, 3), dtype=np.float32))
+            photons = self.trigger.GetCherenkovHitTimes()
+            end_time[t][:] = [p.GetTruetime() for p in photons]
+            track[t][:] = [p.GetParentID() for p in photons]
+            try:  # Only works with new tracking branch of WCSim
+                start_time[t][:] = [p.GetPhotonStartTime() for p in photons]
+                for i in range(3):
+                    start_position[t][:,i] = [p.GetPhotonStartPos(i)/10 for p in photons]
+                    end_position[t][:,i] = [p.GetPhotonEndPos(i)/10 for p in photons]
+            except AttributeError: # leave as zeros if not using tracking branch
+                pass
         photons = {
-            "start_position": np.asarray(start_position, dtype=np.float32),
-            "end_position": np.asarray(end_position, dtype=np.float32),
-            "start_time": np.asarray(start_time, dtype=np.float32),
-            "end_time": np.asarray(end_time, dtype=np.float32),
-            "track": np.asarray(track, dtype=np.int32),
-            "pmt": np.asarray(pmt, dtype=np.int32),
-            "trigger": np.asarray(trigger, dtype=np.int32)
+            "start_position": np.concatenate(start_position),
+            "end_position": np.concatenate(end_position),
+            "start_time": np.concatenate(start_time),
+            "end_time": np.concatenate(end_time),
+            "track": np.concatenate(track),
+            "pmt": np.concatenate(pmt),
+            "trigger": np.concatenate(trigger)
         }
         return photons
 
     def get_tracks(self):
-        id = []
+        track_id = []
         pid = []
         start_time = []
         energy = []
@@ -213,7 +217,7 @@ class WCSim:
         for t in range(self.ntrigger):
             self.get_trigger(t)
             for track in self.trigger.GetTracks():
-                id.append(track.GetId())
+                track_id.append(track.GetId())
                 pid.append(track.GetIpnu())
                 start_time.append(track.GetTime())
                 energy.append(track.GetE())
@@ -222,7 +226,7 @@ class WCSim:
                 parent.append(track.GetParenttype())
                 flag.append(track.GetFlag())
         tracks = {
-            "id": np.asarray(id, dtype=np.int32),
+            "id": np.asarray(track_id, dtype=np.int32),
             "pid": np.asarray(pid, dtype=np.int32),
             "start_time": np.asarray(start_time, dtype=np.float32),
             "energy": np.asarray(energy, dtype=np.float32),
