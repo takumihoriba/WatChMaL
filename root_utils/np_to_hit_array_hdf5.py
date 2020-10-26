@@ -1,5 +1,8 @@
 import numpy as np
 import os
+import sys
+import subprocess
+from datetime import datetime
 import argparse
 import h5py
 import root_utils.pos_utils as pu
@@ -17,6 +20,16 @@ if __name__ == '__main__':
     config = get_args()
     print("ouput file:", config.output_file)
     f = h5py.File(config.output_file, 'w')
+    
+    script_path = os.path.dirname(os.path.abspath(__file__))
+    git_status = subprocess.check_output(['git', '-C', script_path, 'status', '--porcelain', '--untracked-files=no']).decode()
+    if git_status:
+        raise Exception("Directory of this script ({}) is not a clean git directory:\n{}Need a clean git directory for storing script version in output file.".format(script_path, git_status))
+    git_describe = subprocess.check_output(['git', '-C', script_path, 'describe', '--always', '--long', '--tags']).decode().strip()
+    print("git describe for path to this script ({}):".format(script_path), git_describe)
+    f.attrs['git-describe'] = git_describe
+    f.attrs['command'] = str(sys.argv)
+    f.attrs['timestamp'] = str(datetime.now())
 
     total_rows = 0
     total_hits = 0
@@ -26,7 +39,7 @@ if __name__ == '__main__':
     print("counting events and hits, in files")
     file_event_triggers = {}
     for input_file in config.input_files:
-        print(input_file)
+        print(input_file, flush=True)
         if not os.path.isfile(input_file):
             raise ValueError(input_file+" does not exist")
         npz_file = np.load(input_file)
@@ -94,7 +107,7 @@ if __name__ == '__main__':
     hit_offset_next = 0
     label_map = {22: 0, 11: 1, 13: 2}
     for input_file in config.input_files:
-        print(input_file)
+        print(input_file, flush=True)
         npz_file = np.load(input_file, allow_pickle=True)
         good_events = ~np.isnan(file_event_triggers[input_file])
         event_triggers = file_event_triggers[input_file][good_events]
