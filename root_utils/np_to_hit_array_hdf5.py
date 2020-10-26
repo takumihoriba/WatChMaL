@@ -8,6 +8,8 @@ def get_args():
     parser = argparse.ArgumentParser(description='convert and merge .npz files to hdf5')
     parser.add_argument('input_files', type=str, nargs='+')
     parser.add_argument('-o', '--output_file', type=str)
+    parser.add_argument('-H', '--half-height', type=float, default=300)
+    parser.add_argument('-R', '--radius', type=float, default=400)
     args = parser.parse_args()
     return args
 
@@ -79,6 +81,13 @@ if __name__ == '__main__':
     dset_angles=f.create_dataset("angles",
                                  shape=(good_rows, 2),
                                  dtype=np.float32)
+    dset_veto = f.create_dataset("veto",
+                                 shape=(good_rows,),
+                                 dtype=np.bool_)
+    dset_veto2 = f.create_dataset("veto2",
+                                  shape=(good_rows,),
+                                  dtype=np.bool_)
+
     offset = 0
     offset_next = 0
     hit_offset = 0
@@ -99,6 +108,11 @@ if __name__ == '__main__':
         hit_charges = npz_file['digi_hit_charge'][good_events]
         hit_pmts = npz_file['digi_hit_pmt'][good_events]
         hit_triggers = npz_file['digi_hit_trigger'][good_events]
+        track_pid = npz_file['track_pid'][good_events]
+        track_energy = npz_file['track_energy'][good_events]
+        track_stop_position = npz_file['track_stop_position'][good_events]
+        track_start_position = npz_file['track_start_position'][good_events]
+
 
         offset_next += event_ids.shape[0]
 
@@ -115,6 +129,20 @@ if __name__ == '__main__':
         polars = np.arccos(directions[:,1])
         azimuths = np.arctan2(directions[:,2], directions[:,0])
         dset_angles[offset:offset_next,:] = np.hstack((polars.reshape(-1,1),azimuths.reshape(-1,1)))
+
+        for i, (pids, energies, starts, stops) in enumerate(zip(track_pid, track_energy,track_start_position, track_stop_position)):
+            muons_above_threshold = (np.abs(pids) == 13) & (energies > 166)
+            electrons_above_threshold = (np.abs(pids) == 11) & (energies > 2)
+            gammas_above_threshold = (np.abs(pids) == 22) & (energies > 2)
+            above_threshold = muons_above_threshold | electrons_above_threshold | gammas_above_threshold
+            outside_tank = (np.linalg.norm(stops[:,(0,2)], axis=1) > config.radius) | (np.abs(stops[:, 1]) > config.half_height)
+            dset_veto[offset+i] = np.any(above_threshold & outside_tank)
+            end_energy_estimate = energies - np.linalg.norm(stops - starts)*2
+            muons_above_threshold = (np.abs(pids) == 13) & (end_energy_estimate > 166)
+            electrons_above_threshold = (np.abs(pids) == 11) & (end_energy_estimate > 2)
+            gammas_above_threshold = (np.abs(pids) == 22) & (end_energy_estimate > 2)
+            above_threshold = muons_above_threshold | electrons_above_threshold | gammas_above_threshold
+            dset_veto2[offset+i] = np.any(above_threshold & outside_tank)
 
         for i, (trigs, times, charges, pmts) in enumerate(zip(hit_triggers, hit_times, hit_charges, hit_pmts)):
             dset_event_hit_index[offset+i] = hit_offset
