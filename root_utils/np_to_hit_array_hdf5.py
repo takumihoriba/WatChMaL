@@ -81,10 +81,10 @@ if __name__ == '__main__':
                                  dtype=np.float32)
     dset_hit_pmt=f.create_dataset("hit_pmt",
                                   shape=(good_hits, ),
-                                  dtype=np.int16)
+                                  dtype=np.int32)
     dset_event_hit_index=f.create_dataset("event_hits_index",
                                           shape=(good_rows,),
-                                          dtype=np.int64)
+                                          dtype=np.int64) # int32 is too small to fit large indices
     dset_energies=f.create_dataset("energies",
                                    shape=(good_rows, 1),
                                    dtype=np.float32)
