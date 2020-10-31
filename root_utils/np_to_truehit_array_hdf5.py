@@ -61,6 +61,9 @@ if __name__ == '__main__':
     dset_hit_pmt=f.create_dataset("hit_pmt",
                                   shape=(total_hits, ),
                                   dtype=np.int32)
+    dset_hit_parent=f.create_dataset("hit_parent",
+                                  shape=(total_hits, ),
+                                  dtype=np.int32)
     dset_event_hit_index=f.create_dataset("event_hits_index",
                                           shape=(total_rows,),
                                           dtype=np.int64) # int32 is too small to fit large indices
@@ -96,6 +99,7 @@ if __name__ == '__main__':
         energies = npz_file['energy']
         hit_times = npz_file['true_hit_time']
         hit_pmts = npz_file['true_hit_pmt']
+        hit_parents = npz_file['true_hit_parent']
         hit_triggers = npz_file['digi_hit_trigger']
         track_pid = npz_file['track_pid']
         track_energy = npz_file['track_energy']
@@ -133,11 +137,12 @@ if __name__ == '__main__':
             above_threshold = muons_above_threshold | electrons_above_threshold | gammas_above_threshold
             dset_veto2[offset+i] = np.any(above_threshold & outside_tank)
 
-        for i, (times, pmts) in enumerate(zip(hit_times, hit_pmts)):
+        for i, (times, pmts, parents) in enumerate(zip(hit_times, hit_pmts, parents)):
             dset_event_hit_index[offset+i] = hit_offset
             hit_offset_next += times.shape[0]
             dset_hit_time[hit_offset:hit_offset_next] = times
             dset_hit_pmt[hit_offset:hit_offset_next] = pmts
+            dset_hit_parent[hit_offset:hit_offset_next] = parents
             hit_offset = hit_offset_next
 
         offset = offset_next
