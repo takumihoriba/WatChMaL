@@ -65,7 +65,7 @@ fi
 sourceme="${data_dir}/${name}/sourceme.sh"
 echo "Creating source file $sourceme"
 echo "#!/bin/bash" > "$sourceme"
-echo "module load gcc/4.9.4" >> "$sourceme"
+echo "module load gcc/6.4.0" >> "$sourceme"
 echo "module load python/3.6.3" >> "$sourceme"
 echo "module load scipy-stack" >> "$sourceme"
 echo "source \"${ROOTSYS}/bin/thisroot.sh\"" >> "$sourceme"

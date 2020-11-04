@@ -1,5 +1,5 @@
 #!/bin/bash
-module load gcc/4.9.4
+module load gcc/6.4.0
 module load python/3.6.3
 module load scipy-stack
 source /project/rpp-blairt2k/machine_learning/production_software/root/install/bin/thisroot.sh
