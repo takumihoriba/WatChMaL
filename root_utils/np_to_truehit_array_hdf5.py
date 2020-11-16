@@ -137,7 +137,7 @@ if __name__ == '__main__':
             above_threshold = muons_above_threshold | electrons_above_threshold | gammas_above_threshold
             dset_veto2[offset+i] = np.any(above_threshold & outside_tank)
 
-        for i, (times, pmts, parents) in enumerate(zip(hit_times, hit_pmts, parents)):
+        for i, (times, pmts, parents) in enumerate(zip(hit_times, hit_pmts, hit_parents)):
             dset_event_hit_index[offset+i] = hit_offset
             hit_offset_next += times.shape[0]
             dset_hit_time[hit_offset:hit_offset_next] = times
@@ -147,4 +147,4 @@ if __name__ == '__main__':
 
         offset = offset_next
     f.close()
-    print("saved", hit_offset, "hits in", offset, "good events (each with at least", min_hits, "hits)")
+    print("saved", hit_offset, "hits in", offset, "events")
