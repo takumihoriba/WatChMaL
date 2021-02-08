@@ -150,7 +150,7 @@ if __name__ == '__main__':
             above_threshold = muons_above_threshold | electrons_above_threshold | gammas_above_threshold
             outside_tank = (np.linalg.norm(stops[:,(0,2)], axis=1) > config.radius) | (np.abs(stops[:, 1]) > config.half_height)
             dset_veto[offset+i] = np.any(above_threshold & outside_tank)
-            end_energy_estimate = energies - np.linalg.norm(stops - starts)*2
+            end_energy_estimate = energies - np.linalg.norm(stops - starts, axis=1)*2
             muons_above_threshold = (np.abs(pids) == 13) & (end_energy_estimate > 166)
             electrons_above_threshold = (np.abs(pids) == 11) & (end_energy_estimate > 2)
             gammas_above_threshold = (np.abs(pids) == 22) & (end_energy_estimate > 2)
