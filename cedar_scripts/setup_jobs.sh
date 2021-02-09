@@ -88,6 +88,7 @@ cp -r mPMT-configfiles "$G4WORKDIR"
 cp libWCSimRoot.so "$G4WORKDIR"
 cp libWCSim.a "$G4WORKDIR"
 cp -r include "$G4WORKDIR"
+cp -r .git "$G4WORKDIR"
 git describe --always --long --tags > "$G4WORKDIR/WCSim-git-describe"
 # make read-only to prevent accidental write
 chmod -R a-w "$G4WORKDIR"
