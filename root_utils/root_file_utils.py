@@ -243,7 +243,10 @@ class WCSim:
         for t in range(self.ntrigger):
             self.get_trigger(t)
             trigger_times[t] = self.trigger.GetHeader().GetDate()
-            trigger_types[t] = self.trigger.GetTriggerType()
+            trig_type = self.trigger.GetTriggerType()
+            if trig_type > np.iinfo(np.int32).max:
+                trig_type = -1;
+            trigger_types[t] = trig_type
         triggers = {
                 "time": trigger_times,
                 "type": trigger_types
