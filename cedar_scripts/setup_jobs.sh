@@ -27,9 +27,9 @@ if [ "$(git status --porcelain --untracked-files=no)" ]; then
 fi
 
 mkdir -p "$data_dir/$name"
-git describe --always --long --tags > "$data_dir/$name/DataTools-git-describe"
+git describe --always --long --tags --dirty > "$data_dir/$name/DataTools-git-describe"
 
-export G4WORKDIR="$data_dir/$name/WCSim/build"
+export G4WORKDIR="$data_dir/$name/WCSim/build_$(date +"%F_%H-%M-%S")"
 mkdir -p "$G4WORKDIR"
 if [ ! -w "$G4WORKDIR" ]; then
   echo "$G4WORKDIR is not writeable. Trying to overwrite previous run? Delete or make directory writable before running this script if you really want to do that."
@@ -62,36 +62,33 @@ if [ -z "$G4INSTALL" ]; then
   $EXIT 1
 fi
 
-sourceme="${data_dir}/${name}/sourceme.sh"
+sourceme="${data_dir}/${name}/sourceme_$(date +"%F_%H-%M-%S").sh"
 echo "Creating source file $sourceme"
 echo "#!/bin/bash" > "$sourceme"
 echo "module load gcc/6.4.0" >> "$sourceme"
 echo "module load python/3.6.3" >> "$sourceme"
 echo "module load scipy-stack" >> "$sourceme"
 echo "source \"${ROOTSYS}/bin/thisroot.sh\"" >> "$sourceme"
-echo "source \"$(readlink -f "${G4INSTALL}/../../../bin/geant4.sh")\"" >> "$sourceme"
 echo "source \"${G4INSTALL}/geant4make.sh\"" >> "$sourceme"
 echo "export G4WORKDIR=\"${G4WORKDIR}\"" >> "$sourceme"
 echo "export DATATOOLS=\"${DATATOOLS}\"" >> "$sourceme"
 echo 'export LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+"$LD_LIBRARY_PATH:"}${G4LIB}/${G4SYSTEM}' >> "$sourceme"
 echo 'export PYTHONPATH=${PYTHONPATH:+"$PYTHONPATH:"}$DATATOOLS' >> "$sourceme"
-source $sourceme
+source "$sourceme"
+ln -sf "$sourceme" "${data_dir}/${name}/sourceme.sh"
 
 echo "Compiling WCSim, source $PWD, destination $G4WORKDIR"
-make clean
-make rootcint
-make -j16
-echo 'export WCSIMDIR="${G4WORKDIR}"' >> "$sourceme"
-export WCSIMDIR="${G4WORKDIR}"
-cp -r macros "$G4WORKDIR"
-cp -r mPMT-configfiles "$G4WORKDIR"
-cp libWCSimRoot.so "$G4WORKDIR"
-cp libWCSim.a "$G4WORKDIR"
+cd "$G4WORKDIR"
+cmake "$WCSIMDIR"
+make
+cd "$WCSIMDIR"
+# Make a copy of include dir instead of just link to directory that might change
+rm -f "${G4WORKDIR}/include"
 cp -r include "$G4WORKDIR"
 cp -r .git "$G4WORKDIR"
-git describe --always --long --tags > "$G4WORKDIR/WCSim-git-describe"
-# make read-only to prevent accidental write
-chmod -R a-w "$G4WORKDIR"
+git describe --always --long --tags --dirty > "$G4WORKDIR/WCSim-git-describe"
+echo 'export WCSIMDIR="${G4WORKDIR}"' >> "$sourceme"
+export WCSIMDIR="${G4WORKDIR}"
 
 if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
 # script has been sourced
