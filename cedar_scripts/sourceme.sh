@@ -1,4 +1,5 @@
 #!/bin/bash
+module load StdEnv/2016
 module load gcc/6.4.0
 module load python/3.6.3
 module load scipy-stack
