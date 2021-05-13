@@ -143,6 +143,8 @@ if [ -z "${nuance}" ]; then
   [ ! -z "${Emin}" ] && EkinMin="$(python -c "print(${Emin}+${EKth[${pid}]:-0})")"
   if [ "${pid}" == "gamma" ]; then
     generator="gamma-conversion"
+  elif [ "${pid}" == "neutron" ]; then
+    generator="neutron-capture"
   else
     generator="gps"
   fi

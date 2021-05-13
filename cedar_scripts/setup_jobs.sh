@@ -65,6 +65,7 @@ fi
 sourceme="${data_dir}/${name}/sourceme_$(date +"%F_%H-%M-%S").sh"
 echo "Creating source file $sourceme"
 echo "#!/bin/bash" > "$sourceme"
+echo "module load StdEnv/2016" >> "$sourceme"
 echo "module load gcc/6.4.0" >> "$sourceme"
 echo "module load python/3.6.3" >> "$sourceme"
 echo "module load scipy-stack" >> "$sourceme"
