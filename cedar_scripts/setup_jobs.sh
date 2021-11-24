@@ -85,6 +85,8 @@ make
 cd "$WCSIMDIR"
 git describe --always --long --tags --dirty > "$G4WORKDIR/WCSim-git-describe"
 echo 'export WCSIMDIR="${G4WORKDIR}"' >> "$sourceme"
+echo "export FITQUN_ROOT=\"$data_dir/$name/fiTQun/build\"" >> "$sourceme"
+echo 'export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${WCSIMDIR}"' >> "$sourceme"
 export WCSIMDIR="${G4WORKDIR}"
 
 if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
