@@ -28,8 +28,10 @@ fout.create_dataset("labels",data=np.append(np.ones(nsig,dtype="i4"),np.zeros(nb
 fout.create_dataset("event_hits_index", data=np.append(hits_index_sig, hits_index_bg)) 
 fout.create_dataset("nhit",data=np.append(nhitsig, nhitbg))
 fout.create_dataset("hit_pmt",data=np.append(treesig.array("cable").flatten(),treebg.array("cable").flatten()),dtype='i4')
-#fout.create_dataset("hit_time",data=np.append(treesig.array("t").flatten(),treebg.array("t").flatten()))
 fout.create_dataset("hit_charge",data=np.append(treesig.array("q").flatten(),treebg.array("q").flatten()))
+# Calculate relative hit times below instead of the absolute times within the triggering window. 
+#fout.create_dataset("hit_time",data=np.append(treesig.array("t").flatten(),treebg.array("t").flatten()))
+
 
 times_sig = treesig.array("t").tolist()
 times_bg = treebg.array("t").tolist()
@@ -56,7 +58,8 @@ test_idxs = shuffle_idxs[ntrain+nval:]
 
 np.savez(findex, train_idxs=train_idxs, val_idxs=val_idxs, test_idxs=test_idxs)
 
-#np.savez(findex, test_idxs = np.arange(2*nsig))
+# Use this line instead for a testing-only dataset.
+#np.savez(findex, test_idxs = np.arange(nsig+nbg))
 
 
 fsig.close()
