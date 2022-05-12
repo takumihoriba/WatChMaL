@@ -4,4 +4,4 @@ There are two example python scripts here. Both take one input file for signal a
 
 The [preprocess_wit.py](preprocess_wit.py) script takes files in the WIT data format as input for both the signal and background.
 
-The [preprocess_skroot_wit.py](preprocess_wit_skroot.py) script takes a background file in the WIT format and a signal file in the standard SKRoot format generated with the Super-K Fortran libraries. However, these files are not readable in python with either uproot or PyRoot. The relevant root branches must first be copied into a new file with the [copy_branches](copy_branches/copy_branches.cc) program.
+The [preprocess_skroot_wit.py](preprocess_skroot_wit.py) script takes a background file in the WIT format and a signal file in the standard SKRoot format generated with the Super-K Fortran libraries. However, these files are not readable in python with either uproot or PyRoot. The relevant root branches must first be copied into a new file with the [copy_branches](copy_branches/copy_branches.cc) program.
