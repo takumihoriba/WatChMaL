@@ -1,9 +1,9 @@
 FLAGS=-g3 -DNDEBUG -pipe -m64 -std=c++11 -Wshadow -Wall -W -Woverloaded-virtual -fPIC -Wno-deprecated-declarations -pthread -MMD -MP
-INCS=-I/Users/Alejandro/root/include -I.
+INCS=-I$(ROOTSYS)/include -I.
 
 OBJS=loweroot_dict.o loweroot.o tqrealroot_dict.o tqrealroot.o
 
-LIBS=-L/Users/Alejandro/root/lib/ -lCore -lRIO -lHist -lGraf -lGraf3d -lGpad -lTree -lMatrix -lNet -lThread -lMathCore -lCore -lm -ldl  -pthread   -rdynamic
+LIBS=-L$(ROOTSYS)/lib -lCore -lRIO -lHist -lGraf -lGraf3d -lGpad -lTree -lMatrix -lNet -lThread -lMathCore -lCore -lm -ldl  -pthread   -rdynamic
 
 loweroot_dict.o: loweroot.h lowerootLinkDef.h
 	rootcint -f lowerootDict.cc -c -I. loweroot.h lowerootLinkDef.h
