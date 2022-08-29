@@ -2,7 +2,9 @@ import ROOT
 import os
 import numpy as np
 
-ROOT.gSystem.Load(os.environ['WCSIMDIR'] + "/libWCSimRoot.so")
+print(os.path.abspath(ROOT.__file__))
+
+ROOT.gSystem.Load("/home/fcormier/t2k/t2k_ml_base/t2k_ml/DataTools/libWCSimRoot.so")
 
 
 class WCSim:
@@ -70,6 +72,14 @@ class WCSim:
         tracks = self.trigger.GetTracks()
         # Primary particles with no parent are the initial simulation
         particles = [t for t in tracks if t.GetFlag() == 0 and t.GetParenttype() == 0]
+        part_array = []
+        for part in tracks:
+            test_energy = part.GetE()
+            test_Start = [part.GetStart(i) for i in range(3)]
+            test_Dir = [part.GetDir(i) for i in range(3)]
+            test_time = part.GetTime()
+            test_pid = part.GetIpnu()
+            part_array.append([test_energy, test_time, test_pid, test_Start, test_Dir])
         # Check there is exactly one particle with no parent:
         if len(particles) == 1:
             # Only one primary, this is the particle being simulated
@@ -103,14 +113,25 @@ class WCSim:
                 "energy": sum(p.GetE() for p in particles)
             }
         # Otherwise something else is going on... guess info from the primaries
+        #EDIT: Return info of particle with highest energy
         momentum = [sum(p.GetDir(i) * p.GetP() for p in particles) for i in range(3)]
         norm = np.sqrt(sum(p ** 2 for p in momentum))
+        final_particle = None
+        max_E=0
+        for part in particles:
+           test_1 = part.GetIpnu()
+           test_2 = part.GetE()
+           test_3 = [part.GetStart(i) for i in range(3)]
+           test_3 = [part.GetDir(i) for i in range(3)]
+           if part.GetE() > max_E:
+                final_particle = part 
+                max_E = part.GetE()
         return {
-            "pid": 0,  # there's more than one particle so just use pid 0
-            "position": [sum(p.GetStart(i) for p in particles)/len(particles) for i in range(3)],  # average position
-            "direction": [p / norm for p in momentum],  # direction of sum of momenta
-            "energy": sum(p.GetE() for p in particles)  # sum of energies
-        }
+                "pid": final_particle.GetIpnu(),
+                "position": [final_particle.GetStart(i) for i in range(3)],
+                "direction": [final_particle.GetDir(i) for i in range(3)],
+                "energy": final_particle.GetE()
+        }, part_array
 
     def get_digitized_hits(self):
         position = []
