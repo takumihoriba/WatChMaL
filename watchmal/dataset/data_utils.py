@@ -39,7 +39,7 @@ def get_data_loader(settings, dataset, batch_size, sampler, num_workers, is_dist
     #PointNet
     if 'PointNet'.lower() in settings.arch.lower():
         dataset = data_class(dataset, use_positions=use_positions, use_times=use_time, is_distributed=is_distributed)
-    #ResNet
+    #ResNet 
     if 'ResNet'.lower() in settings.arch.lower():
         dataset = data_class(dataset, pmt_positions_file, is_distributed=is_distributed)
     #dataset = instantiate(dataset, transforms=transforms, is_distributed=is_distributed)
