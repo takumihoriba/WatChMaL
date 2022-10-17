@@ -93,7 +93,7 @@ class ClassifierEngine:
         print('Successfully set up Scheduler')
 
 
-    def configure_data_loaders(self, data_config, loaders_config, is_distributed, seed, train_indices, test_indices, val_indices, settings):
+    def configure_data_loaders(self, data_config, train_loader_config, val_loader_config, is_distributed, seed, train_indices, test_indices, val_indices, settings):
         """
         Set up data loaders from loaders config
 
@@ -108,9 +108,9 @@ class ClassifierEngine:
         """
 
         #for name, loader_config in loaders_config.items():
-        self.data_loaders['train'] = get_data_loader(settings, **data_config, **loaders_config, indices=train_indices, seed=seed)
-        self.data_loaders['validation'] = get_data_loader(settings, **data_config, **loaders_config, indices = test_indices, seed=seed)
-        self.data_loaders['test'] = get_data_loader(settings, **data_config, **loaders_config, indices = val_indices, seed=seed)
+        self.data_loaders['train'] = get_data_loader(settings, **data_config, **train_loader_config, indices=train_indices, seed=seed)
+        self.data_loaders['validation'] = get_data_loader(settings, **data_config, **val_loader_config, indices = test_indices, seed=seed)
+        self.data_loaders['test'] = get_data_loader(settings, **data_config, **train_loader_config, indices = val_indices, seed=seed)
     
     def get_synchronized_metrics(self, metric_dict):
         """
