@@ -21,6 +21,7 @@ import sys
 from sys import stdout
 import copy
 import random
+import csv
 
 # WatChMaL imports
 from WatChMaL.watchmal.dataset.data_utils import get_data_loader
@@ -71,6 +72,10 @@ class ClassifierEngine:
         
         self.optimizer = None
         self.scheduler = None
+
+        # attributes for csv file
+        self.avg_eval_acc = 0
+        self.avg_eval_loss = 0
     
     def configure_optimizers(self, settings):
         """
@@ -290,6 +295,25 @@ class ClassifierEngine:
         if self.rank == 0:
             self.val_log.close()
         self.evaluate(settings,"")
+        
+        # Organizes data for csv file 
+        input_header = ["INPUT HYPERPARAMETERS"]
+        hyper_parameters = [['Network: '+str(settings.arch)], ['Train Batch Size: '+str(settings.TrainBatchSize)], ['Val Batch Size: '+str(settings.ValBatchSize)], 
+                            ['Optimizer: '+ str(settings.optimizer)], ['Epochs: '+str(settings.epochs)], ['Restore Best State: '+str(settings.restoreBestState)],
+                            ['Learning Rate: '+str(settings.lr)], ['Weight Decay: '+str(settings.weightDecay)]]
+        output_header = ["OUTPUT RESULTS"]
+        output_results = [['Avg Eval Accuracy: '+str(self.avg_eval_acc)], ['Avg Eval Loss: '+str(self.avg_eval_loss)]]
+
+        # Writes csv file 
+        with open (str(self.dirpath)+'Inputs_Outputs.csv', 'w', encoding='UTF8', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(input_header)
+            writer.writerows(hyper_parameters)
+            writer.writerow([])
+            writer.writerow(output_header)
+            writer.writerows(output_results)
+
+
 
 
 
@@ -464,9 +488,13 @@ class ClassifierEngine:
             val_iterations = np.sum(local_eval_metrics_dict["eval_iterations"])
             val_loss = np.sum(local_eval_metrics_dict["eval_loss"])
             val_acc = np.sum(local_eval_metrics_dict["eval_acc"])
+            
+            self.avg_eval_loss = val_loss/val_iterations
+            self.avg_eval_acc = val_acc/val_iterations
 
-            print("\nAvg eval loss : " + str(val_loss/val_iterations),
-                  "\nAvg eval acc : "  + str(val_acc/val_iterations))
+            print("\nAvg eval loss : " + str(self.avg_eval_loss),
+                  "\nAvg eval acc : "  + str(self.avg_eval_acc))
+            
         
     # ========================================================================
     # Saving and loading models
@@ -514,8 +542,8 @@ class ClassifierEngine:
         best_validation_path = "{}{}{}{}".format(self.dirpath,
                                      str(self.model._get_name()),
                                      "BEST",
-                                     ".pth")
-
+                                     ".pth")  
+        print(str(best_validation_path))
         self.restore_state_from_file(best_validation_path)
     
     def restore_state(self, restore_config):
