@@ -23,10 +23,15 @@ from time import strftime, localtime, time
 import sys
 from sys import stdout
 import copy
+import h5py
 
 # WatChMaL imports
 from watchmal.dataset.data_utils import get_data_loader
 from watchmal.utils.logging_utils import CSVData
+from watchmal.engine.tensor_plot_maker import *
+
+#whatever import
+from compare_outputs import dealWithOutputs
 
 class ClassifierEngine:
     """Engine for performing training or evaluation  for a classification network."""
@@ -113,6 +118,7 @@ class ClassifierEngine:
         for name, loader_config in loaders_config.items():
             self.data_loaders[name] = get_data_loader(**data_config, **loader_config, is_distributed=is_distributed, seed=seed)
             if self.label_set is not None:
+                print(self.data_loaders[name].dataset)
                 self.data_loaders[name].dataset.map_labels(self.label_set)
     
     def get_synchronized_metrics(self, metric_dict):
@@ -209,7 +215,7 @@ class ClassifierEngine:
 
         # set model to training mode
         self.model.train()
-
+    
         # initialize epoch and iteration counters
         self.epoch = 0.
         self.iteration = 0
@@ -225,78 +231,81 @@ class ClassifierEngine:
         # global training loop for multiple epochs
         try:
             with self.model.join(throw_on_early_termination=True):
-                for self.epoch in range(epochs):
-                    if self.rank == 0:
-                        print('Epoch', self.epoch+1, 'Starting @', strftime("%Y-%m-%d %H:%M:%S", localtime()))
-                        print(f'Learning Rate: {self.optimizer.param_groups[0]["lr"]}')
-                    
-                    times = []
-
-                    start_time = time()
-                    iteration_time = start_time
-
-                    train_loader = self.data_loaders["train"]
-                    self.step = 0
-                    # update seeding for distributed samplers
-                    if self.is_distributed:
-                        train_loader.sampler.set_epoch(self.epoch)
-
-                    # local training loop for batches in a single epoch 
-                    for self.step, train_data in enumerate(train_loader):
-                        
-                        # run validation on given intervals
-                        if self.iteration % val_interval == 0:
-                            early_stop = self.validate(val_iter, num_val_batches, checkpointing, len(train_loader), early_stopping_patience)
-                        
-                        # Train on batch
-                        self.data = train_data['data']
-                        self.labels = train_data['labels']
-
-                        # Call forward: make a prediction & measure the average error using data = self.data
-                        res = self.forward(True)
-
-                        #Call backward: backpropagate error and update weights using loss = self.loss
-                        self.backward()
-
-                        # update the epoch and iteration
-                        # self.epoch += 1. / len(self.data_loaders["train"])
-                        self.step += 1
-                        self.iteration += 1
-                        
-                        # get relevant attributes of result for logging
-                        train_metrics = {"iteration": self.iteration, "epoch": self.epoch, "loss": res["loss"], "accuracy": res["accuracy"]}
-                        
-                        # record the metrics for the mini-batch in the log
-                        self.train_log.record(train_metrics)
-                        self.train_log.write()
-                        self.train_log.flush()
-                        
-                        # print the metrics at given intervals
-                        if self.rank == 0 and self.iteration % report_interval == 0:
-                            previous_iteration_time = iteration_time
-                            iteration_time = time()
-
-                            print("... Iteration %d ... Epoch %d ... Step %d/%d  ... Training Loss %1.3f ... Training Accuracy %1.3f ... Time Elapsed %1.3f ... Iteration Time %1.3f" %
-                                (self.iteration, self.epoch+1, self.step, len(train_loader), res["loss"], res["accuracy"], iteration_time - start_time, iteration_time - previous_iteration_time))
-
-                        if early_stop:
-                            break
-                                        
-                    if self.scheduler is not None:
-                        self.scheduler.step()
-
-                    if (save_interval is not None) and ((self.epoch+1)%save_interval == 0):
-                        self.save_state(name=f'_epoch_{self.epoch+1}')   
-
-                    if early_stop:
-                        break
+                self.run_epoch(epochs, report_interval, val_interval, num_val_batches, checkpointing, early_stopping_patience, save_interval, val_iter)
         except:
-            print(f"ONE GPU FAILED: {self.rank}")
-            pass
+            print(f"Not running multi-processing: {self.rank}")
+            self.run_epoch(epochs, report_interval, val_interval, num_val_batches, checkpointing, early_stopping_patience, save_interval, val_iter)
         
         self.train_log.close()
         if self.rank == 0:
             self.val_log.close()
+
+    def run_epoch(self, epochs, report_interval, val_interval, num_val_batches, checkpointing, early_stopping_patience, save_interval, val_iter):
+        early_stop = False 
+        for self.epoch in range(epochs):
+            if self.rank == 0:
+                print('Epoch', self.epoch+1, 'Starting @', strftime("%Y-%m-%d %H:%M:%S", localtime()))
+                print(f'Learning Rate: {self.optimizer.param_groups[0]["lr"]}')
+                    
+            times = []
+
+            start_time = time()
+            iteration_time = start_time
+
+            train_loader = self.data_loaders["train"]
+            self.step = 0
+                    # update seeding for distributed samplers
+            if self.is_distributed:
+                train_loader.sampler.set_epoch(self.epoch)
+
+                    # local training loop for batches in a single epoch 
+            for self.step, train_data in enumerate(train_loader):
+                        # run validation on given intervals
+                if self.iteration % val_interval == 0:
+                    early_stop = self.validate(val_iter, num_val_batches, checkpointing, len(train_loader), early_stopping_patience)
+                        
+                        # Train on batch
+                self.data = train_data['data']
+                self.labels = train_data['labels']
+                #print('self.data = ', self.data)
+                #print('train data self.labels = ', self.labels)
+                        # Call forward: make a prediction & measure the average error using data = self.data
+                res = self.forward(True)
+
+                        #Call backward: backpropagate error and update weights using loss = self.loss
+                self.backward()
+
+                        # update the epoch and iteration
+                        # self.epoch += 1. / len(self.data_loaders["train"])
+                self.step += 1
+                self.iteration += 1
+                        
+                        # get relevant attributes of result for logging
+                train_metrics = {"iteration": self.iteration, "epoch": self.epoch, "loss": res["loss"], "accuracy": res["accuracy"]}
+                        # record the metrics for the mini-batch in the log
+                self.train_log.record(train_metrics)
+                self.train_log.write()
+                self.train_log.flush()
+                        
+                        # print the metrics at given intervals
+                if self.rank == 0 and self.iteration % report_interval == 0:
+                    previous_iteration_time = iteration_time
+                    iteration_time = time()
+
+                    print("... Iteration %d ... Epoch %d ... Step %d/%d  ... Training Loss %1.3f ... Training Accuracy %1.3f ... Time Elapsed %1.3f ... Iteration Time %1.3f" %
+                                (self.iteration, self.epoch+1, self.step, len(train_loader), res["loss"], res["accuracy"], iteration_time - start_time, iteration_time - previous_iteration_time))
+
+                if early_stop:
+                    break
+                                        
+            if self.scheduler is not None:
+                self.scheduler.step()
+
+            if (save_interval is not None) and ((self.epoch+1)%save_interval == 0):
+                self.save_state(name=f'_epoch_{self.epoch+1}')   
+
+            if early_stop:
+                break
 
     def validate(self, val_iter, num_val_batches, checkpointing, iterations_per_epoch, early_stopping_patience):
         """
@@ -322,13 +331,12 @@ class ClassifierEngine:
                 print("Fetching new validation iterator...")
                 val_iter = iter(self.data_loaders["validation"])
                 val_data = next(val_iter)
-
+                #print('val_data = ', val_data)
             # extract the event data from the input data tuple
             self.data = val_data['data']
             self.labels = val_data['labels']
-
+            #print('validation labels', self.labels)
             val_res = self.forward(False)
-
             val_metrics["loss"] += val_res["loss"]
             val_metrics["accuracy"] += val_res["accuracy"]
         # return model to training mode
@@ -375,16 +383,20 @@ class ClassifierEngine:
         if self.do_early_stop:
             return True
 
+
     def evaluate(self, test_config):
         """Evaluate the performance of the trained model on the test set."""
         print("evaluating in directory: ", self.dirpath)
-
+        #inputPath =  '/fast_scratch/ipress/egamma/training/egamma_10mCylinder/combine_combine.hy'
+        # grab relevent parameters from hy file and only keep the values corresponding to those in the test set
+        #hy = h5py.File(inputPath, "r")
         
         # Variables to output at the end
         eval_loss = 0.0
         eval_acc = 0.0
         eval_iterations = 0
-        
+        #energies = np.array(hy['energies']).squeeze()
+        #print('energies:', energies)
         # Iterate over the validation set to calculate val_loss and val_acc
         with torch.no_grad():
             
@@ -400,7 +412,7 @@ class ClassifierEngine:
                 # load data
                 self.data = eval_data['data']
                 self.labels = eval_data['labels']
-
+                #print('self.labels = ', self.labels)
                 eval_indices = eval_data['indices']
                 
                 # Run the forward procedure and output the result
@@ -408,15 +420,15 @@ class ClassifierEngine:
 
                 eval_loss += result['loss']
                 eval_acc  += result['accuracy']
-                
+
                 # Add the local result to the final result
                 indices.extend(eval_indices.numpy())
                 labels.extend(self.labels.numpy())
                 predictions.extend(result['predicted_labels'].detach().cpu().numpy())
                 softmaxes.extend(result["softmax"].detach().cpu().numpy())
-           
+                #print('np.unique for the labels', np.unique(self.labels))
                 print("eval_iteration : " + str(it) + " eval_loss : " + str(result["loss"]) + " eval_accuracy : " + str(result["accuracy"]))
-            
+                plotter_val(self.data, eval_iterations, self.labels)
                 eval_iterations += 1
         
         # convert arrays to torch tensors
@@ -510,8 +522,9 @@ class ClassifierEngine:
         best_validation_path = "{}{}{}{}".format(self.dirpath,
                                      str(self.model._get_name()),
                                      "BEST",
-                                     ".pth")
-
+                                    ".pth")
+        
+        #best_validation_path = 
         self.restore_state_from_file(best_validation_path)
     
     def restore_state(self, restore_config):

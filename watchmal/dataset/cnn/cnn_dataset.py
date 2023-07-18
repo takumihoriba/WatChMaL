@@ -12,7 +12,9 @@ import numpy as np
 # WatChMaL imports
 from WatChMaL.watchmal.dataset.h5_dataset import H5Dataset
 import WatChMaL.watchmal.dataset.data_utils as du
+from WatChMaL.watchmal.engine.tensor_plot_maker import *
 
+i = 1
 
 class CNNDataset(H5Dataset):
     """
@@ -47,8 +49,8 @@ class CNNDataset(H5Dataset):
             indexes). By default, zero-indexing is assumed.
         """
         super().__init__(h5file)
-        
-        self.pmt_positions = np.load(pmt_positions_file)['pmt_image_positions']
+        #print('np.load whatever find this ______________________', np.load(pmt_positions_file))
+        self.pmt_positions = np.load(pmt_positions_file)
         self.use_times = use_times
         self.use_charges = use_charges
         self.data_size = np.max(self.pmt_positions, axis=0) + 1
@@ -111,5 +113,15 @@ class CNNDataset(H5Dataset):
         processed_data = du.apply_random_transformations(self.transforms, processed_data)
 
         data_dict["data"] = processed_data
+        
+        #print('[0,:,:] = ', len(processed_data[0, :, :]), processed_data[0, :, :])
+        
+        #Row_sum, Column_sum = matrix_calc(processed_data)
+        
+        #print(Row_sum)
+        #print(Column_sum)
+        #weighted_average = np.average(processed_data[0,:,:], weights = processed_data[0,:,:])
 
+        #print('weighted_avg: ', weighted_average)
+        #print('weighted_avg_3: ', weighted_average_3)
         return data_dict
