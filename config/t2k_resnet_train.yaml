@@ -9,7 +9,7 @@ model:
   _target_: watchmal.model.classifier.Classifier
   num_classes: 2
   feature_extractor:
-    _target_: watchmal.model.resnet.resnet18
+    _target_: watchmal.model.resnet.resnet34
     num_input_channels: 2
     num_output_channels: 2
   classification_network:
@@ -31,7 +31,7 @@ tasks:
     data_loaders:
       train:
         split_key: train_idxs
-        batch_size: 32
+        batch_size: 624
         num_workers: 4
         transforms:
         - horizontal_flip
@@ -41,26 +41,27 @@ tasks:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
       validation:
         split_key: val_idxs
-        batch_size: 128
+        batch_size: 1024
         num_workers: 4
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
     optimizers:
       _target_: torch.optim.Adam
-      lr: 0.0001
+      lr: 0.1
       weight_decay: 0
     scheduler:
       _target_: torch.optim.lr_scheduler.ExponentialLR
-      gamma: 0.65
+      gamma: 0.8
   evaluate:
     data_loaders:
       test:
         split_key: test_idxs
-        batch_size: 128
+        batch_size: 1024
         num_workers: 4
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
 gpu_list: 
+<<<<<<< HEAD
 - 0
 - 1
 seed: null
