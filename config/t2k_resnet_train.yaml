@@ -1,7 +1,7 @@
 data:
-  split_path: /fast_scratch/ipress/egamma/training/combine_combine_egamma/train0.7_val0.15_test0.15000000000000005.npz
+  split_path: /fast_scratch/ipress/rangeBall/rangeBall/train_val_test_nFolds4_fold1.npz
   dataset:
-    h5file: '/fast_scratch/ipress/egamma/training/combine_combine_egamma/combine_combine_egamma.hy'
+    h5file: '/fast_scratch/ipress/rangeBall/rangeBall/combine_combine.hy'
     _target_: watchmal.dataset.cnn.cnn_dataset.CNNDataset
     pmt_positions_file: /home/ipress/t2k_ml_training/data/sk_wcsim_imagefile.npy
 model:
@@ -12,6 +12,8 @@ model:
     _target_: watchmal.model.resnet.resnet34
     num_input_channels: 2
     num_output_channels: 2
+    stride: 3
+    kernelSize: 3
   classification_network:
     _target_: watchmal.model.classifier.PassThrough
 engine:
@@ -31,7 +33,7 @@ tasks:
     data_loaders:
       train:
         split_key: train_idxs
-        batch_size: 624
+        batch_size: 512
         num_workers: 4
         transforms:
         - horizontal_flip
@@ -61,8 +63,6 @@ tasks:
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
 gpu_list: 
-<<<<<<< HEAD
-- 0
 - 1
 seed: null
 dump_path: ./outputs/
