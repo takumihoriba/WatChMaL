@@ -13,7 +13,7 @@ model:
     num_input_channels: 2
     num_output_channels: 2
     stride: 3
-    kernelSize: 3
+    kernelSize: 2
   classification_network:
     _target_: watchmal.model.classifier.PassThrough
 engine:

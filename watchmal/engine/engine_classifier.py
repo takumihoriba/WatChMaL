@@ -454,6 +454,7 @@ class ClassifierEngine:
                 pred_range.extend(result["pred_range"].detach().cpu().numpy())
            
                 print("eval_iteration : " + str(it) + " eval_loss : " + str(result["loss"]) + " eval_accuracy : " + str(result["accuracy"]))
+                #image_mover(self.data, eval_iterations)
                 plotter_val(self.data, eval_iterations, self.labels)
                 eval_iterations += 1
         

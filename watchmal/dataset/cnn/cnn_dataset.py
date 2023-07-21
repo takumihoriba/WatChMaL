@@ -114,14 +114,4 @@ class CNNDataset(H5Dataset):
 
         data_dict["data"] = processed_data
         
-        #print('[0,:,:] = ', len(processed_data[0, :, :]), processed_data[0, :, :])
-        
-        #Row_sum, Column_sum = matrix_calc(processed_data)
-        
-        #print(Row_sum)
-        #print(Column_sum)
-        #weighted_average = np.average(processed_data[0,:,:], weights = processed_data[0,:,:])
-
-        #print('weighted_avg: ', weighted_average)
-        #print('weighted_avg_3: ', weighted_average_3)
         return data_dict
