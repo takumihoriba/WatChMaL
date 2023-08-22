@@ -282,7 +282,9 @@ class ClassifierEngine:
                 self.data = train_data['data']
                 self.labels = train_data['labels']
                 self.range = train_data['range']
-
+                #plotter_val(self.data, self.iteration, self.labels)        
+                #self.data = image_mover(self.data)
+                #plotter_val(self.data, self.iteration, self.labels, name = 'asfd')
                         # Call forward: make a prediction & measure the average error using data = self.data
                 res = self.forward(True)
 
@@ -434,6 +436,7 @@ class ClassifierEngine:
                 
                 # load data
                 self.data = eval_data['data']
+                #self.data = image_mover(self.data)
                 self.labels = eval_data['labels']
                 self.range = eval_data['range']
 
@@ -455,7 +458,7 @@ class ClassifierEngine:
            
                 print("eval_iteration : " + str(it) + " eval_loss : " + str(result["loss"]) + " eval_accuracy : " + str(result["accuracy"]))
                 #image_mover(self.data, eval_iterations)
-                plotter_val(self.data, eval_iterations, self.labels)
+                #plotter_val(self.data, eval_iterations, self.labels)
                 eval_iterations += 1
         
         # convert arrays to torch tensors

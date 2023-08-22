@@ -6,8 +6,8 @@ import torch
 
 def mover(tensor_data):
     #sum up the columns and rows and take their mean
-    Column_sum = list(torch.sum(tensor_data[0, 1, :, :], axis = 0))
-    Row_sum = list(torch.sum(tensor_data[0, 1, :, :], axis = 1))
+    Column_sum = list(torch.sum(tensor_data[0,1, :, :], axis = 0))
+    Row_sum = list(torch.sum(tensor_data[0,1, :, :], axis = 1))
 
     n_column = len(Column_sum)
     n_row = len(Row_sum)
@@ -26,30 +26,30 @@ def mover(tensor_data):
     #Splice the beginning/end of the array onto the other end
     
     dist_col = int(np.average(indices_array_col, weights = Column_sum)) - 70
-    x_col = Column_sum[:dist_col]
-    Column_adjusted = Column_sum[dist_col:]
-    Column_adjusted.extend(x_col)
-    #Column_adjusted = np.roll(Column_sum, -(dist_col), axis = 0)
-    #dist_col_adj = int(np.average(indices_array_col, weights = Column_adjusted))
+    #x_col = Column_sum[:dist_col]
+    #Column_adjusted = Column_sum[dist_col:]
+    #Column_adjusted.extend(x_col)
     
     #Do the same w/ rows
     dist_row = int(np.average(indices_array_row, weights = Row_sum)) - 70
-    x_row = Row_sum[:dist_row]
-    Row_adjusted = Row_sum[dist_row:]
-    Row_adjusted.extend(x_row)
-    #dist_row = int(np.average(indices_array_row, weights = Row_adjusted))
-    #Row_adjusted = np.roll(Row_sum, -(dist_row), axis = 1)
-    #dist_row_adjusted = int(np.average(indices_array_row, weights = Row_adjusted))
-    #print('dist row adjusted', dist_row_adjusted, dist_col_adj)
+    #x_row = Row_sum[:dist_row]
+    #Row_adjusted = Row_sum[dist_row:]
+    #Row_adjusted.extend(x_row)
     
     return dist_row, dist_col
-    #return Column_sum, Row_sum, Column_adjusted, Row_adjusted
 
-def image_mover(tensor_data, iteration = None):
-    data = (tensor_data[0, 1, :, :])
+def image_mover(tensor_data, iteration = None):    
+    data = (tensor_data[1, :, :])#TURN BACK INTO TENSOR
+    #data_time = tensor_data[0, :, :]
+    #tensor_list = [tensor_data for _ in range(int(len(tensor_data[:,1,1,1])))]
+    #print('tensor_list', tensor_list)
     dist_col, dist_row = mover(tensor_data)
-    data = np.roll(data, -(dist_col), axis = 0)
-    data = np.roll(data, -(dist_row), axis = 1)
+    data = np.roll(x, -(dist_col), axis = 0)
+    data = np.roll(x, -(dist_row), axis = 1)
+    #data_conc_0 = np.stack((data, data_time), axis = 0)
+    #array_list = [data_conc_0 for _ in range(int(len(tensor_data[:,1,1,1])))]
+    #stacked_array = np.stack(array_list, axis=0)
+    #data_conc = torch.tensor(stacked_array)
     return data
 
 def matrix_calc(tensor_data, iteration = None):
@@ -70,19 +70,20 @@ def matrix_calc(tensor_data, iteration = None):
     plt.close()
     return Row_sum, Column_sum, Column_adjusted, Row_adjusted
 
-def plotter_val(tensor_data, iteration, labels):
+def plotter_val(tensor_data, iteration = None, labels = None, name = None):
     #data = image_mover(tensor_data)
-    plt.imshow(tensor_data[0, 1, :, :], cmap='viridis', interpolation='nearest')
+    plt.imshow(tensor_data[1, :, :], cmap='viridis', interpolation='nearest')
     plt.colorbar(label = 'Charge')
-    if labels[1] == 1:
-        plt.title('Electron cherenkov ring')
-    else:
-        plt.title('Gamma cherenkov ring')
+    if labels is not None:
+        if labels[1] == 1:
+            plt.title('Electron cherenkov ring')
+        else:
+            plt.title('Muon cherenkov ring')
     plt.xlabel('Horizontal channels')
     plt.ylabel('Vertical channels')
     print('tensor_data size = ', tensor_data.size())
     print(f'saving figure {iteration}')
-    plt.savefig(f'/fast_scratch/ipress/egamma/tensor-plots-validation/tensor_plot_{iteration}.png')
+    plt.savefig(f'/fast_scratch/ipress/emu/wcsim/tensor-plots-validation/tensor_plot_{iteration}_{name}.png')
     plt.close()
     #matrix_calc(tensor_data, iteration)
 
