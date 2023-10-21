@@ -38,7 +38,7 @@ def combine_softmax(softmaxes, labels, label_map=None):
 
 
 def plot_rocs(runs, signal_labels, background_labels, selection=None, ax=None, fig_size=None, x_label="", y_label="",
-              x_lim=None, y_lim=None, y_log=None, x_log=None, legend='best', mode='rejection', **plot_args):
+              x_lim=None, y_lim=None, y_log=None, x_log=None, legend='best', mode='rejection',add_fitqun=False, **plot_args):
     """
     Plot overlaid ROC curves of results from a number of classification runs
 
@@ -93,6 +93,9 @@ def plot_rocs(runs, signal_labels, background_labels, selection=None, ax=None, f
         run_selection = r.selection if selection is None else selection
         selected_signal = np.isin(r.true_labels, signal_labels)[run_selection]
         selected_discriminator = r.discriminator(signal_labels, background_labels)[run_selection]
+        print("IN ROC MAKING")
+        print(np.unique(np.isnan(selected_signal),return_counts=True))
+        print(np.unique(np.isnan(selected_discriminator),return_counts=True))
         fpr, tpr, _ = metrics.roc_curve(selected_signal, selected_discriminator)
         auc = metrics.auc(fpr, tpr)
         args = {**plot_args, **r.plot_args}
@@ -108,6 +111,8 @@ def plot_rocs(runs, signal_labels, background_labels, selection=None, ax=None, f
             raise ValueError(f"Unknown ROC curve mode '{mode}'.")
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
+    if add_fitqun:
+        plt.plot(0.985,16.9,'ro', label='fiTQun') 
     if x_log:
         ax.set_xscale('log')
     if y_log:
@@ -507,6 +512,12 @@ class WatChMaLClassification(ClassificationRun, WatChMaLOutput):
         """
         signal_softmax = combine_softmax(self.softmaxes, signal_labels, self.label_map)
         background_softmax = combine_softmax(self.softmaxes, background_labels, self.label_map)
+        print("IN DISC")
+        print(f'signal labels: {signal_labels}')
+        print(f'signal labels: {background_labels}')
+        print(np.unique(signal_softmax==0, return_counts=True))
+        print(np.unique(background_softmax==0, return_counts=True))
+        print(self.softmaxes)
         return signal_softmax / (signal_softmax + background_softmax)
 
     @property

@@ -22,7 +22,7 @@ class WatChMaLOutput(ABC, metaclass=ABCMeta):
             (by default use all events sorted by their indices).
         """
         self.directory = directory
-        self.indices = indices
+        self.indices = np.unique(indices)
         self._training_log = None
         self._log_train = None
         self._train_log_epoch = None
@@ -104,12 +104,27 @@ class WatChMaLOutput(ABC, metaclass=ABCMeta):
             contains the softmax values of a class.
         """
         outputs = np.load(self.directory + "/" + name + ".npy")
+        print(outputs.shape)
+        print(f'outputs: {np.sum(outputs,axis=1)[np.sum(outputs,axis=1) < 0.9 ]}')
+        print(f'DIRECTORY: {self.directory}')
         output_indices = np.load(self.directory + "/indices.npy")
+        print(f"WEIRD OUTPUT: {outputs[output_indices == 2286626]}")
         if self.indices is None:
             return outputs[output_indices.argsort()].squeeze()
         intersection = np.intersect1d(self.indices, output_indices, return_indices=True)
+        diff = np.setdiff1d( output_indices, self.indices)
+        uni, uni_counts = np.unique(output_indices, return_counts=True)
+        print(uni[uni_counts>1])
+        print(f'diff: {diff}')
+        print(intersection[1])
+        print(intersection[2].shape)
+        print(np.where(self.indices[intersection[1]]!=output_indices[intersection[2]]))
+        print(intersection[1].shape)
         sorted_outputs = np.zeros(self.indices.shape + outputs.shape[1:])
+        print(sorted_outputs)
         sorted_outputs[intersection[1]] = outputs[intersection[2]]
+        print(f'sorted outputs: {np.sum(sorted_outputs,axis=1)[np.sum(sorted_outputs,axis=1) < 0.9 ]}')
+        print(sorted_outputs.squeeze().shape)
         return sorted_outputs.squeeze()
 
     @abstractmethod
