@@ -19,7 +19,7 @@ from math import floor, ceil
 import numpy as np
 from numpy import savez
 import os
-from time import strftime, localtime, time
+from time import strftime, localtime, time, process_time
 import sys
 from sys import stdout
 import copy
@@ -27,6 +27,7 @@ import copy
 # WatChMaL imports
 from watchmal.dataset.data_utils import get_data_loader
 from watchmal.utils.logging_utils import CSVData
+
 
 class ClassifierEngine:
     """Engine for performing training or evaluation  for a classification network."""
@@ -55,7 +56,7 @@ class ClassifierEngine:
             self.restore_path = dump_path
         else:
             self.restore_path = restore_path
-        print(f'RESTORE PATH: {self.restore_path}')
+        print(f'LABEL SET: {label_set}')
         self.rank = rank
         self.model = model
         self.device = torch.device(gpu)
@@ -122,6 +123,7 @@ class ClassifierEngine:
         for name, loader_config in loaders_config.items():
             self.data_loaders[name] = get_data_loader(**data_config, **loader_config, is_distributed=is_distributed, seed=seed)
             if self.label_set is not None:
+                print("DATA LOADERS LABEL SET")
                 print(self.data_loaders[name].dataset)
                 self.data_loaders[name].dataset.map_labels(self.label_set)
     
@@ -179,6 +181,7 @@ class ClassifierEngine:
                       'pred_range': pred_range,
                       'raw_pred_labels': model_out[0]}
 
+            print(f"LABELS: {labels}")
             self.loss_c = self.criterion(model_out[0], labels)
             #print(f"True range: {primary_range}")
             #print(f"Pred range: {model_out[1]}")
@@ -411,6 +414,8 @@ class ClassifierEngine:
             return True
 
     def evaluate(self, test_config):
+
+        os.environ["CUDA_VISIBLE_DEVICES"]=""
         """Evaluate the performance of the trained model on the test set."""
         print("evaluating in directory: ", self.dirpath)
 
@@ -431,6 +436,7 @@ class ClassifierEngine:
             
             # Extract the event data and label from the DataLoader iterator
             for it, eval_data in enumerate(self.data_loaders["test"]):
+                t = process_time()
                 
                 # load data
                 self.data = eval_data['data']
@@ -456,6 +462,7 @@ class ClassifierEngine:
                 pred_range.extend(result["pred_range"].detach().cpu().numpy())
            
                 print("eval_iteration : " + str(it) + " eval_loss : " + str(result["loss"]) + " eval_accuracy : " + str(result["accuracy"]))
+                print(f'Iteration time: {process_time() - t}')
             
                 eval_iterations += 1
         

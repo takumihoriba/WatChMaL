@@ -1,7 +1,7 @@
 data:
-  split_path: '/fast_scratch/WatChMaL/data/T2K/oct6_eMuPosPions_0dwall_1M_1/train_val_test_nFolds5_fold3.npz' 
+  split_path: '/fast_scratch/WatChMaL/data/T2K/sep20_emu_2BugFixes_1M_1/train_val_test_nFolds5_fold3.npz' 
   dataset:
-    h5file: '/fast_scratch/WatChMaL/data/T2K/oct6_eMuPosPions_0dwall_1M_1/combine_combine.hy'
+    h5file: '/fast_scratch/WatChMaL/data/T2K/sep20_emu_2BugFixes_1M_1/combine_combine.hy'
     _target_: watchmal.dataset.cnn.cnn_dataset.CNNDataset
     pmt_positions_file: /fast_scratch/WatChMaL/data/T2K/image_files/skdetsim_imagefile.npy
     transforms:
@@ -13,9 +13,9 @@ model:
   _target_: watchmal.model.classifier.Classifier
   num_classes: 2
   feature_extractor:
-    _target_: watchmal.model.resnet.resnet18
+    _target_: watchmal.model.resnet.resnet101
     num_input_channels: 2
-    num_output_channels: 3
+    num_output_channels: 2
     stride: 3
     kernelSize: 3
   classification_network:
@@ -35,7 +35,6 @@ tasks:
     label_set:
     - 0
     - 1
-    - 2
     data_loaders:
       train:
         split_key: train_idxs
@@ -64,12 +63,11 @@ tasks:
     data_loaders:
       test:
         split_key: test_idxs
-        batch_size: 256
+        batch_size: 28
         num_workers: 4
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
 gpu_list: 
-- 4
-- 7
+- 2
 seed: null
 dump_path: ./outputs/
