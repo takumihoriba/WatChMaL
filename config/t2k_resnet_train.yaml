@@ -33,8 +33,8 @@ tasks:
     data_loaders:
       train:
         split_key: train_idxs
-        batch_size: 624
-        num_workers: 3
+        batch_size: 2
+        num_workers: 1
         transforms:
         - horizontal_flip
         - vertical_flip
@@ -43,8 +43,8 @@ tasks:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
       validation:
         split_key: val_idxs
-        batch_size: 1024
-        num_workers: 4
+        batch_size: 2
+        num_workers: 1
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
     optimizers:
@@ -58,8 +58,8 @@ tasks:
     data_loaders:
       test:
         split_key: test_idxs
-        batch_size: 512
-        num_workers: 4
+        batch_size: 2
+        num_workers: 1
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
 gpu_list: 
