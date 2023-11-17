@@ -19,7 +19,7 @@ import debugpy
 import os
 import numpy as np
 
-from watchmal.utils.logging_utils import get_git_version
+from WatChMaL.watchmal.utils.logging_utils import get_git_version
 
 logger = logging.getLogger('train')
 

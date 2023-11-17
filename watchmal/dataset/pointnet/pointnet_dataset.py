@@ -6,8 +6,8 @@ Class implementing a dataset for PointNet in h5 format
 import numpy as np
 
 # WatChMaL imports
-from watchmal.dataset.h5_dataset import H5Dataset
-from watchmal.dataset.pointnet import transformations
+from WatChMaL.watchmal.dataset.h5_dataset import H5Dataset
+from WatChMaL.watchmal.dataset.pointnet import transformations
 import watchmal.dataset.data_utils as du
 
 

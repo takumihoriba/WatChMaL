@@ -3,7 +3,7 @@ Tools for event displays from PointNet dataset
 """
 import numpy as np
 from analysis.event_display.event_display import plot_event_3d
-from watchmal.dataset.pointnet.pointnet_dataset import PointNetDataset
+from WatChMaL.watchmal.dataset.pointnet.pointnet_dataset import PointNetDataset
 from matplotlib.pyplot import cm
 
 

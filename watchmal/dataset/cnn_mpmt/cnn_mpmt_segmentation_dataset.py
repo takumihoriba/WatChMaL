@@ -13,7 +13,7 @@ import numpy as np
 import pickle
 
 # WatChMaL imports
-from watchmal.dataset.h5_dataset import H5TrueDataset
+from WatChMaL.watchmal.dataset.h5_dataset import H5TrueDataset
 import watchmal.dataset.data_utils as du
 
 class CNNmPMTSegmentationDataset(Dataset):

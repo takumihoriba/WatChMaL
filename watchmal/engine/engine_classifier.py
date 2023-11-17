@@ -25,8 +25,8 @@ from sys import stdout
 import copy
 
 # WatChMaL imports
-from watchmal.dataset.data_utils import get_data_loader
-from watchmal.utils.logging_utils import CSVData
+from WatChMaL.watchmal.dataset.data_utils import get_data_loader
+from WatChMaL.watchmal.utils.logging_utils import CSVData
 
 class ClassifierEngine:
     """Engine for performing training or evaluation  for a classification network."""

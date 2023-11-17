@@ -14,7 +14,7 @@ import numpy as np
 import random
 
 # WatChMaL imports
-from watchmal.dataset.samplers import DistributedSamplerWrapper
+from WatChMaL.watchmal.dataset.samplers import DistributedSamplerWrapper
 
 import torchvision
 

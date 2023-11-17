@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 # WatChMaL imports
-from watchmal.dataset.h5_dataset import H5Dataset
+from WatChMaL.watchmal.dataset.h5_dataset import H5Dataset
 
 # pyg imports
 import torch_geometric.data as PyGData

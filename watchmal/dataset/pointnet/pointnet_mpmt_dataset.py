@@ -1,8 +1,8 @@
 import numpy as np
 import torch
 
-from watchmal.dataset.h5_dataset import H5Dataset
-from watchmal.dataset.pointnet import transformations
+from WatChMaL.watchmal.dataset.h5_dataset import H5Dataset
+from WatChMaL.watchmal.dataset.pointnet import transformations
 import watchmal.dataset.data_utils as du
 
 barrel_map_array_idxs = np.array([6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5, 15, 16, 17, 12, 13, 14, 18], dtype=np.int16)
