@@ -1,7 +1,7 @@
 data:
-  split_path: '/fast_scratch/fcormier/t2k/ml/skdetsim/aug30_emu_skdetsim_smallFile_2/train_val_test_nFolds5_fold0.npz' 
+  split_path: '/fast_scratch/WatChMaL/data/T2K/sep22_emu_2BugFixes_0dwallCut_1M_1/train_val_test_nFolds5_fold0.npz' 
   dataset:
-    h5file: '/fast_scratch/fcormier/t2k/ml/skdetsim/aug30_emu_skdetsim_smallFile_2/combine_combine.hy'
+    h5file: '/fast_scratch/WatChMaL/data/T2K/sep22_emu_2BugFixes_0dwallCut_1M_1/combine_combine.hy'
     _target_: watchmal.dataset.cnn.cnn_dataset.CNNDataset
     pmt_positions_file: /fast_scratch/WatChMaL/data/T2K/image_files/skdetsim_imagefile.npy
     transforms:
