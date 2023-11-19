@@ -5,9 +5,6 @@ data:
     _target_: watchmal.dataset.cnn.cnn_dataset.CNNDataset
     pmt_positions_file: /fast_scratch/WatChMaL/data/T2K/image_files/skdetsim_imagefile.npy
     transforms:
-    - horizontal_flip
-    - vertical_flip
-    - front_back_reflection
 model:
   _recursive_: false
   _target_: watchmal.model.classifier.Classifier
@@ -36,9 +33,6 @@ tasks:
         batch_size: 128
         num_workers: 2
         transforms:
-        - horizontal_flip
-        - vertical_flip
-        - front_back_reflection
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
       validation:
