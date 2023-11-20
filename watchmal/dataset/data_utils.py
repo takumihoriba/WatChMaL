@@ -78,7 +78,7 @@ def get_data_loader(dataset, batch_size, sampler, num_workers, is_distributed, s
 
         batch_size = int(batch_size/ngpus)
         if batch_size == 0:
-            batch_size = 1
+            batch_size = 32
         
         sampler = DistributedSamplerWrapper(sampler=sampler, seed=seed)
 
