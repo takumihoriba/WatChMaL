@@ -460,7 +460,7 @@ class ClassifierEngine:
                 predictions.extend(result['predicted_labels'].detach().cpu().numpy())
                 softmaxes.extend(result["softmax"].detach().cpu().numpy())
                 #pred_range.extend(result["pred_range"].detach().cpu().numpy())
-                pred_positions.extend(result["pred_position"].detach().cpu().numpy())
+                pred_positions.extend(result["pred_positions"].detach().cpu().numpy())
            
                 print("eval_iteration : " + str(it) + " eval_loss : " + str(result["loss"]) + " eval_accuracy : " + str(result["accuracy"]))
             
