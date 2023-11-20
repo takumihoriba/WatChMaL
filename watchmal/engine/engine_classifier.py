@@ -166,24 +166,25 @@ class ClassifierEngine:
             # Move the data and the labels to the GPU (if using CPU this has no effect)
             data = self.data.to(self.device)
             labels = self.labels.to(self.device)
-            primary_range = self.range.to(self.device)
+            #primary_range = self.range.to(self.device)
+            positions = self.positions.to(self.device) # need to selct x specifically?? + scale
 
             model_out = self.model(data)
             
             softmax = self.softmax(model_out[0])
-            pred_range = model_out[1]
+            pred_pos = model_out[1]
             predicted_labels = torch.argmax(model_out[0], dim=-1)
 
             result = {'predicted_labels': predicted_labels,
                       'softmax': softmax,
-                      'pred_range': pred_range,
+                      'pred_pos': pred_pos,
                       'raw_pred_labels': model_out[0]}
 
             self.loss_c = self.criterion(model_out[0], labels)
             #print(f"True range: {primary_range}")
             #print(f"Pred range: {model_out[1]}")
-            self.loss_r = self.criterion_r(model_out[1], primary_range)
-            self.loss = self.loss_c + 0*(self.loss_r)
+            self.loss_r = self.criterion_r(model_out[1], positions)
+            self.loss = self.loss_c + 0.001*(self.loss_r)
             accuracy = (predicted_labels == labels).sum().item() / float(predicted_labels.nelement())
 
             result['loss'] = float(self.loss.item())
