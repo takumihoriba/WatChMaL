@@ -118,13 +118,14 @@ class H5CommonDataset(Dataset, ABC):
             self.initialize()
 
         print(self.positions[item].shape)
+        print(np.squeeze(self.positions[item], axis=0))
 
         data_dict = {
             "labels": self.labels[item].astype(np.int64),
             #"range": self.range[item].astype(np.float32),
             # "energies": self.energies[item],
             # "angles": self.angles[item],
-            "positions": np.squeeze(self.positions[item], axis=2),
+            "positions": np.squeeze(self.positions[item], axis=0),
             #np.expand_dims(self.positions[item], axis=1), #self.positions[item].unsqueeze(1), # pred or true?
             # "event_ids": self.event_ids[item],
             "root_files": self.root_files[item],
