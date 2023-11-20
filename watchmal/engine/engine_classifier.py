@@ -360,7 +360,7 @@ class ClassifierEngine:
             self.data = val_data['data']
             self.labels = val_data['labels']
             #self.range = val_data['range']
-            self.positions = val_batch['positions']
+            self.positions = val_data['positions']
 
             val_res = self.forward(False)
 
