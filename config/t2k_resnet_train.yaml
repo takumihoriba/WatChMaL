@@ -30,7 +30,7 @@ tasks:
     data_loaders:
       train:
         split_key: train_idxs
-        batch_size: 2
+        batch_size: 1
         num_workers: 1
         transforms:
         sampler:
@@ -58,5 +58,6 @@ tasks:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
 gpu_list: 
 - 5
+- 6
 seed: null
 dump_path: ./outputs/
