@@ -76,8 +76,8 @@ class ClassifierEngine:
         # define the placeholder attributes
         self.data = None
         self.labels = None
-        self.range = None
-        #self.positions = None
+        #self.range = None
+        self.positions = None
         self.loss = None
         self.loss_c = None
         self.loss_r = None
@@ -285,8 +285,8 @@ class ClassifierEngine:
                         # Train on batch
                 self.data = train_data['data']
                 self.labels = train_data['labels']
-                self.range = train_data['range']
-                #self.positions = train_data['positions']
+                #self.range = train_data['range']
+                self.positions = train_data['positions']
 
                         # Call forward: make a prediction & measure the average error using data = self.data
                 res = self.forward(True)
@@ -355,8 +355,8 @@ class ClassifierEngine:
             # extract the event data from the input data tuple
             self.data = val_data['data']
             self.labels = val_data['labels']
-            self.range = val_data['range']
-            #self.positions = val_batch['positions']
+            #self.range = val_data['range']
+            self.positions = val_batch['positions']
 
             val_res = self.forward(False)
 
@@ -432,15 +432,15 @@ class ClassifierEngine:
             
             # Variables for the confusion matrix
             loss, accuracy, indices, labels, predictions, softmaxes, pred_range, true_range, rootfiles= [],[],[],[],[],[],[],[],[]
-            
+            true_positions, pred_positions = [], []
             # Extract the event data and label from the DataLoader iterator
             for it, eval_data in enumerate(self.data_loaders["test"]):
                 
                 # load data
                 self.data = eval_data['data']
                 self.labels = eval_data['labels']
-                self.range = eval_data['range']
-                #self.positions = eval_data['positions']
+                #self.range = eval_data['range']
+                self.positions = eval_data['positions']
 
                 eval_indices = eval_data['indices']
                 eval_rootfile = eval_data['root_files']
@@ -455,11 +455,12 @@ class ClassifierEngine:
                 indices.extend(eval_indices.numpy())
                 rootfiles.extend(np.array(eval_rootfile))
                 labels.extend(self.labels.numpy())
-                true_range.extend(self.range.numpy())
-                #    self.positions.numpy())#
+                #true_range.extend(self.range.numpy())
+                true_positions.extend(self.positions.numpy())
                 predictions.extend(result['predicted_labels'].detach().cpu().numpy())
                 softmaxes.extend(result["softmax"].detach().cpu().numpy())
-                pred_range.extend(result["pred_range"].detach().cpu().numpy())
+                #pred_range.extend(result["pred_range"].detach().cpu().numpy())
+                pred_positions.extend(result["pred_position"].detach().cpu().numpy())
            
                 print("eval_iteration : " + str(it) + " eval_loss : " + str(result["loss"]) + " eval_accuracy : " + str(result["accuracy"]))
             
@@ -477,12 +478,15 @@ class ClassifierEngine:
         indices     = np.array(indices)
         rootfiles    = np.array(rootfiles)
         labels      = np.array(labels)
-        true_range      = np.array(true_range)
+        #true_range      = np.array(true_range)
+        true_positions    = np.array(true_positions)
         predictions = np.array(predictions)
         softmaxes   = np.array(softmaxes)
-        pred_range   = np.array(pred_range)
+        #pred_range   = np.array(pred_range)
+        pred_positions      = np.array(pred_positions)
         
-        local_eval_results_dict = {"indices":indices, "labels":labels, "true_range":true_range, "predictions":predictions, "softmaxes":softmaxes, "pred_range": pred_range}
+        #local_eval_results_dict = {"indices":indices, "labels":labels, "true_range":true_range, "predictions":predictions, "softmaxes":softmaxes, "pred_range": pred_range}
+        local_eval_results_dict = {"indices":indices, "labels":labels, "true_positions":true_positions, "predictions":predictions, "softmaxes":softmaxes, "pred_positions": pred_positions}
 
         if self.is_distributed:
             # Gather results from all processes
@@ -495,10 +499,13 @@ class ClassifierEngine:
                 
                 indices     = np.array(global_eval_results_dict["indices"].cpu())
                 labels      = np.array(global_eval_results_dict["labels"].cpu())
-                true_range      = np.array(global_eval_results_dict["true_range"].cpu())
+                #true_range      = np.array(global_eval_results_dict["true_range"].cpu())
+                true_positions = np.array(global_eval_metrics_dict["true_positions"].cpu())
                 predictions = np.array(global_eval_results_dict["predictions"].cpu())
                 softmaxes   = np.array(global_eval_results_dict["softmaxes"].cpu())
-                pred_range   = np.array(global_eval_results_dict["pred_range"].cpu())
+                #pred_range   = np.array(global_eval_results_dict["pred_range"].cpu())
+                pred_positions = np.array(global_eval_metrics_dict["pred_positions"].cpu())
+
 
         
         if self.rank == 0:
@@ -512,8 +519,10 @@ class ClassifierEngine:
             np.save(self.dirpath + "labels.npy", labels)#[sorted_indices])
             np.save(self.dirpath + "predictions.npy", predictions)#[sorted_indices])
             np.save(self.dirpath + "softmax.npy", softmaxes)#[sorted_indices])
-            np.save(self.dirpath + "true_range.npy", true_range)#[sorted_indices])
-            np.save(self.dirpath + "pred_range.npy", pred_range)#[sorted_indices])
+            #np.save(self.dirpath + "true_range.npy", true_range)#[sorted_indices])
+            #np.save(self.dirpath + "pred_range.npy", pred_range)#[sorted_indices])
+            np.save(self.dirpath + "true_positions.npy", true_positions)
+            np.save(self.dirpath + "pred_positions.npy", pred_positions)
 
             # Compute overall evaluation metrics
             val_iterations = np.sum(local_eval_metrics_dict["eval_iterations"])
