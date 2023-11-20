@@ -117,8 +117,8 @@ class H5CommonDataset(Dataset, ABC):
         if not self.initialized:
             self.initialize()
 
-        print(self.positions[item].shape)
-        print(np.squeeze(self.positions[item], axis=0))
+        #print(self.positions[item].shape)
+        #print(np.squeeze(self.positions[item], axis=0).shape)
 
         data_dict = {
             "labels": self.labels[item].astype(np.int64),
