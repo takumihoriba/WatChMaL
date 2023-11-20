@@ -185,7 +185,7 @@ class ClassifierEngine:
             #print(f"True range: {primary_range}")
             #print(f"Pred range: {model_out[1]}")
             self.loss_r = self.criterion_r(model_out[1], positions)
-            self.loss = self.loss_c + 0.001*(self.loss_r)
+            self.loss = self.loss_c + 1e-5*(self.loss_r)
             accuracy = (predicted_labels == labels).sum().item() / float(predicted_labels.nelement())
 
             result['loss'] = float(self.loss.item())

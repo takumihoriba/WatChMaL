@@ -122,7 +122,7 @@ class H5CommonDataset(Dataset, ABC):
             #"range": self.range[item].astype(np.float32),
             # "energies": self.energies[item],
             # "angles": self.angles[item],
-            "positions": self.positions[item], # pred or true?
+            "positions": self.positions[item].unsqueeze(1), # pred or true?
             # "event_ids": self.event_ids[item],
             "root_files": self.root_files[item],
             "indices": item
