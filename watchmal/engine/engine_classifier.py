@@ -76,8 +76,8 @@ class ClassifierEngine:
         # define the placeholder attributes
         self.data = None
         self.labels = None
-        #self.range = None
-        self.positions = None
+        self.range = None
+        #self.positions = None
         self.loss = None
         self.loss_c = None
         self.loss_r = None
@@ -285,8 +285,8 @@ class ClassifierEngine:
                         # Train on batch
                 self.data = train_data['data']
                 self.labels = train_data['labels']
-                #self.range = train_data['range']
-                self.positions = train_data['positions']
+                self.range = train_data['range']
+                #self.positions = train_data['positions']
 
                         # Call forward: make a prediction & measure the average error using data = self.data
                 res = self.forward(True)
@@ -355,8 +355,8 @@ class ClassifierEngine:
             # extract the event data from the input data tuple
             self.data = val_data['data']
             self.labels = val_data['labels']
-            #self.range = val_data['range']
-            self.positions = val_batch['positions']
+            self.range = val_data['range']
+            #self.positions = val_batch['positions']
 
             val_res = self.forward(False)
 
@@ -439,8 +439,8 @@ class ClassifierEngine:
                 # load data
                 self.data = eval_data['data']
                 self.labels = eval_data['labels']
-                #self.range = eval_data['range']
-                self.positions = eval_data['positions']
+                self.range = eval_data['range']
+                #self.positions = eval_data['positions']
 
                 eval_indices = eval_data['indices']
                 eval_rootfile = eval_data['root_files']
@@ -455,7 +455,8 @@ class ClassifierEngine:
                 indices.extend(eval_indices.numpy())
                 rootfiles.extend(np.array(eval_rootfile))
                 labels.extend(self.labels.numpy())
-                true_range.extend(self.positions.numpy())#self.range.numpy())
+                true_range.extend(self.range.numpy())
+                #    self.positions.numpy())#
                 predictions.extend(result['predicted_labels'].detach().cpu().numpy())
                 softmaxes.extend(result["softmax"].detach().cpu().numpy())
                 pred_range.extend(result["pred_range"].detach().cpu().numpy())
