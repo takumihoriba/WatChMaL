@@ -181,6 +181,9 @@ class ClassifierEngine:
                       'softmax': softmax,
                       'pred_positions': pred_positions,
                       'raw_pred_labels': model_out[0]}
+            
+            print('real:', positions)
+            print('pred:', pred_positions)
 
             self.loss_c = self.criterion(model_out[0], labels)
             #print(f"True range: {primary_range}")
