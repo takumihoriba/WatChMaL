@@ -23,6 +23,7 @@ from time import strftime, localtime, time
 import sys
 from sys import stdout
 import copy
+import traceback 
 
 # WatChMaL imports
 from WatChMaL.watchmal.dataset.data_utils import get_data_loader
@@ -254,6 +255,7 @@ class ClassifierEngine:
                 self.run_epoch(epochs, report_interval, val_interval, num_val_batches, checkpointing, early_stopping_patience, save_interval, val_iter)
             else:
                 print('###########################\n', error)
+                traceback.print_exc() 
 
         self.train_log.close()
         if self.rank == 0:
