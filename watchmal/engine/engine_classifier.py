@@ -77,7 +77,7 @@ class ClassifierEngine:
         self.data = None
         self.labels = None
         #self.range = None
-        self.positions
+        self.positions = None
         self.loss = None
         self.loss_c = None
         self.loss_r = None
