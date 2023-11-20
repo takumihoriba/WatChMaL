@@ -253,7 +253,7 @@ class ClassifierEngine:
                 print(f"Not running multi-processing: {self.rank}")
                 self.run_epoch(epochs, report_interval, val_interval, num_val_batches, checkpointing, early_stopping_patience, save_interval, val_iter)
             else:
-                print(error)
+                print('###########################\n', error)
 
         self.train_log.close()
         if self.rank == 0:
