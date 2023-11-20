@@ -173,12 +173,12 @@ class ClassifierEngine:
             model_out = self.model(data)
             
             softmax = self.softmax(model_out[0])
-            pred_pos = model_out[1]
+            pred_positions = model_out[1]
             predicted_labels = torch.argmax(model_out[0], dim=-1)
 
             result = {'predicted_labels': predicted_labels,
                       'softmax': softmax,
-                      'pred_pos': pred_pos,
+                      'pred_positions': pred_positions,
                       'raw_pred_labels': model_out[0]}
 
             self.loss_c = self.criterion(model_out[0], labels)
@@ -446,7 +446,7 @@ class ClassifierEngine:
                 eval_rootfile = eval_data['root_files']
                 
                 # Run the forward procedure and output the result
-                result = self.forward(train=False)
+                result = self.forward(train=False) # how to access this dictionairy?
 
                 eval_loss += result['loss']
                 eval_acc  += result['accuracy']
