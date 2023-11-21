@@ -1,10 +1,13 @@
 data:
-  split_path: '/fast_scratch/WatChMaL/data/T2K/sep22_emu_2BugFixes_0dwallCut_1M_1/train_val_test_nFolds5_fold0.npz' 
+  split_path: '/fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE/train_val_test_nFolds3_fold0.npz' 
   dataset:
-    h5file: '/fast_scratch/WatChMaL/data/T2K/sep22_emu_2BugFixes_0dwallCut_1M_1/combine_combine.hy'
+    h5file: '/fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE/combine_combine.hy'
     _target_: watchmal.dataset.cnn.cnn_dataset.CNNDataset
     pmt_positions_file: /fast_scratch/WatChMaL/data/T2K/image_files/skdetsim_imagefile.npy
     transforms:
+    - horizontal_flip
+    - vertical_flip
+    - front_back_reflection
 model:
   _recursive_: false
   _target_: watchmal.model.classifier.Classifier
@@ -20,7 +23,7 @@ engine:
   restore_path: 0
 tasks:
   train:
-    epochs: 5
+    epochs: 10
     report_interval: 100
     val_interval: 100
     num_val_batches: 32
@@ -33,6 +36,9 @@ tasks:
         batch_size: 64
         num_workers: 2
         transforms:
+        - horizontal_flip
+        - vertical_flip
+        - front_back_reflection
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
       validation:
