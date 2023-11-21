@@ -10,6 +10,23 @@ import h5py
 import numpy as np
 from abc import ABC, abstractmethod
 
+norm_position = True
+
+def normalize(data, x_bounds=(-1600,1600), y_bounds=(-1600,1600), z_bounds=(-1600,1600)):
+    '''
+    defaults to values for position in detector
+
+    rough values in here for now
+
+    to be run on each event invidually
+    '''
+    bounds = [x_bounds, y_bounds, z_bounds]
+    for i in range(3):
+        data[i] = ((data[i] - bounds[i][0])/(bounds[i][1] - bounds[i][0]))
+
+    #normed_data = 
+    #return normed_data
+    return data
 
 class H5CommonDataset(Dataset, ABC):
     """
@@ -119,13 +136,16 @@ class H5CommonDataset(Dataset, ABC):
 
         #print(self.positions[item].shape)
         #print(np.squeeze(self.positions[item], axis=0).shape)
+        positions = np.squeeze(self.positions[item], axis=0)
+        if norm_position == True:
+            positions = normalize(positions)
 
         data_dict = {
             "labels": self.labels[item].astype(np.int64),
             #"range": self.range[item].astype(np.float32),
             # "energies": self.energies[item],
             # "angles": self.angles[item],
-            "positions": np.squeeze(self.positions[item], axis=0),
+            "positions": positions,
             #np.expand_dims(self.positions[item], axis=1), #self.positions[item].unsqueeze(1), # pred or true?
             # "event_ids": self.event_ids[item],
             "root_files": self.root_files[item],
