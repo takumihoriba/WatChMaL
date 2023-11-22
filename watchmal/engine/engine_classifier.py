@@ -509,7 +509,7 @@ class ClassifierEngine:
                 indices     = np.array(global_eval_results_dict["indices"].cpu())
                 labels      = np.array(global_eval_results_dict["labels"].cpu())
                 #true_range      = np.array(global_eval_results_dict["true_range"].cpu())
-                true_positions = np.array(global_eval_metrics_dict["true_positions"].cpu())
+                #true_positions = np.array(global_eval_metrics_dict["true_positions"].cpu())
                 predictions = np.array(global_eval_results_dict["predictions"].cpu())
                 softmaxes   = np.array(global_eval_results_dict["softmaxes"].cpu())
                 #pred_range   = np.array(global_eval_results_dict["pred_range"].cpu())
@@ -530,7 +530,7 @@ class ClassifierEngine:
             np.save(self.dirpath + "softmax.npy", softmaxes)#[sorted_indices])
             #np.save(self.dirpath + "true_range.npy", true_range)#[sorted_indices])
             #np.save(self.dirpath + "pred_range.npy", pred_range)#[sorted_indices])
-            np.save(self.dirpath + "true_positions.npy", true_positions)
+            #np.save(self.dirpath + "true_positions.npy", true_positions)
             np.save(self.dirpath + "pred_positions.npy", pred_positions)
 
             # Compute overall evaluation metrics
