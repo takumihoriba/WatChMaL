@@ -23,7 +23,7 @@ engine:
   restore_path: 0
 tasks:
   train:
-    epochs: 10
+    epochs: 0
     report_interval: 100
     val_interval: 100
     num_val_batches: 32
