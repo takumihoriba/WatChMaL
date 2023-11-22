@@ -513,7 +513,7 @@ class ClassifierEngine:
                 predictions = np.array(global_eval_results_dict["predictions"].cpu())
                 softmaxes   = np.array(global_eval_results_dict["softmaxes"].cpu())
                 #pred_range   = np.array(global_eval_results_dict["pred_range"].cpu())
-                pred_positions = np.array(global_eval_metrics_dict["pred_positions"].cpu())
+                #pred_positions = np.array(global_eval_metrics_dict["pred_positions"].cpu())
 
 
         
