@@ -20,7 +20,7 @@ model:
     _target_: watchmal.model.classifier.PassThrough
 engine:
   _target_: watchmal.engine.engine_classifier.ClassifierEngine
-  restore_path: /fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE/21-11-2023-000000/
+  restore_path: /fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE/21112023-000000/
 tasks:
   train:
     epochs: 0
