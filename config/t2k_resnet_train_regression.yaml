@@ -20,7 +20,7 @@ engine:
   restore_path: /fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE/nov23_normed_regression/20092023-101855/
 tasks:
   train:
-    epochs: 0
+    epochs: 10
     report_interval: 100
     val_interval: 100
     num_val_batches: 32
