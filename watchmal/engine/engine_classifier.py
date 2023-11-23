@@ -498,7 +498,7 @@ class ClassifierEngine:
         pred_positions      = np.array(pred_positions)
         
         #local_eval_results_dict = {"indices":indices, "labels":labels, "true_range":true_range, "predictions":predictions, "softmaxes":softmaxes, "pred_range": pred_range}
-        local_eval_results_dict = {"indices":indices, "labels":labels, "true_positions":true_positions, "predictions":predictions, "softmaxes":softmaxes, "pred_positions": pred_positions, "true_positions": true_positions}
+        local_eval_results_dict = {"indices":indices, "labels":labels, "predictions":predictions, "softmaxes":softmaxes, "pred_positions": pred_positions, "true_positions": true_positions}
 
         if self.is_distributed:
             # Gather results from all processes
@@ -508,6 +508,8 @@ class ClassifierEngine:
             if self.rank == 0:
                 for name, tensor in zip(global_eval_metrics_dict.keys(), global_eval_metrics_dict.values()):
                     local_eval_metrics_dict[name] = np.array(tensor.cpu())
+
+                print(global_eval_metrics_dict)
                 
                 indices     = np.array(global_eval_results_dict["indices"].cpu())
                 labels      = np.array(global_eval_results_dict["labels"].cpu())
