@@ -139,7 +139,9 @@ def plot_fitqun_comparison(plot_output, ax_e, ax_fitqun_e, ax_mu, ax_fitqun_mu, 
         plt.xlabel(x_axis_name)
         plt.ylabel("Muon Mis-Tagging Efficiency [%]")
         plt.legend()
-        plt.ylim(80,100)
+
+        if name == 'e_ve_combine.png'
+        #plt.ylim(80,100)
         #plt.figure(e_mom_fig_fitqun.number)
         plt.savefig(plot_output + 'mu_'+name+'.png', format='png')
-        plt.clf()
+        plt.clf() # add to the other one
