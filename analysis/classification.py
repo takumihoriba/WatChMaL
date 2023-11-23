@@ -507,6 +507,10 @@ class WatChMaLClassification(ClassificationRun, WatChMaLOutput):
         """
         signal_softmax = combine_softmax(self.softmaxes, signal_labels, self.label_map)
         background_softmax = combine_softmax(self.softmaxes, background_labels, self.label_map)
+        print(signal_softmax)
+        print(background_softmax)
+        print(signal_labels)
+        print(background_labels)
         return signal_softmax / (signal_softmax + background_softmax)
 
     @property
