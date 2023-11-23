@@ -507,14 +507,17 @@ class WatChMaLClassification(ClassificationRun, WatChMaLOutput):
         """
         signal_softmax = combine_softmax(self.softmaxes, signal_labels, self.label_map)
         background_softmax = combine_softmax(self.softmaxes, background_labels, self.label_map)
-        print(signal_labels)
-        print(background_labels)
+        #print(signal_labels)
+        #print(background_labels)
+        lst = []
         for i in range(len(signal_softmax)):
-            print(signal_softmax[i])
-            print(background_softmax[i])
-            print(signal_softmax[i] + background_softmax[i]) # not a nan or zero
-            print(signal_softmax[i] / (signal_softmax[i] + background_softmax[i]))
-        return signal_softmax / (signal_softmax + background_softmax)
+            #print(signal_softmax[i])
+            #print(background_softmax[i])
+            #print(signal_softmax[i] + background_softmax[i]) # not a nan or zero
+            lst.append(signal_softmax[i] / (signal_softmax[i] + background_softmax[i]))
+        
+        lst = np.array(lst)
+        return lst #signal_softmax / (signal_softmax + background_softmax)
 
     @property
     def train_log_accuracy(self):
