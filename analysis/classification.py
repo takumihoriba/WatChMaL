@@ -323,9 +323,11 @@ class ClassificationRun(ABC):
         """
         selection = self.select_labels(select_labels, selection)
         discriminator_values = self.discriminator(signal_labels, background_labels)
+        # TEMP
+        #discriminator_values = 0.9
         try:
             threshold = np.quantile(discriminator_values[selection], 1 - efficiency)
-        except IndexError as ex:
+        except IndexError as ex: # why is this not raised?
             raise ValueError("There are zero selected events so cannot calculate a cut with any efficiency.") from ex
         self.cut = np.array(discriminator_values) > threshold
         if return_threshold:

@@ -423,7 +423,7 @@ class ClassifierEngine:
         if self.do_early_stop:
             return True
 
-    def evaluate(self, test_config):
+    def evaluate(self, test_config, regression=True):
         """Evaluate the performance of the trained model on the test set."""
         print("evaluating in directory: ", self.dirpath)
 
@@ -440,7 +440,9 @@ class ClassifierEngine:
             self.model.eval()
             
             # Variables for the confusion matrix
-            loss, accuracy, indices, labels, predictions, softmaxes, pred_range, true_range, rootfiles= [],[],[],[],[],[],[],[],[]
+            #loss, accuracy, indices, labels, predictions, softmaxes, pred_range, true_range, rootfiles= [],[],[],[],[],[],[],[],[]
+            loss, accuracy, indices, labels, predictions, softmaxes, rootfiles= [],[],[],[],[],[],[],[],[]
+            #if regression:
             true_positions, pred_positions = [], []
             # Extract the event data and label from the DataLoader iterator
             for it, eval_data in enumerate(self.data_loaders["test"]):
@@ -449,6 +451,7 @@ class ClassifierEngine:
                 self.data = eval_data['data']
                 self.labels = eval_data['labels']
                 #self.range = eval_data['range']
+                #if regression: 
                 self.positions = eval_data['positions']
 
                 eval_indices = eval_data['indices']
@@ -509,11 +512,11 @@ class ClassifierEngine:
                 indices     = np.array(global_eval_results_dict["indices"].cpu())
                 labels      = np.array(global_eval_results_dict["labels"].cpu())
                 #true_range      = np.array(global_eval_results_dict["true_range"].cpu())
-                #true_positions = np.array(global_eval_metrics_dict["true_positions"].cpu())
+                true_positions = np.array(global_eval_metrics_dict["true_positions"].cpu())
                 predictions = np.array(global_eval_results_dict["predictions"].cpu())
                 softmaxes   = np.array(global_eval_results_dict["softmaxes"].cpu())
                 #pred_range   = np.array(global_eval_results_dict["pred_range"].cpu())
-                #pred_positions = np.array(global_eval_metrics_dict["pred_positions"].cpu())
+                pred_positions = np.array(global_eval_metrics_dict["pred_positions"].cpu())
 
 
         
@@ -530,7 +533,7 @@ class ClassifierEngine:
             np.save(self.dirpath + "softmax.npy", softmaxes)#[sorted_indices])
             #np.save(self.dirpath + "true_range.npy", true_range)#[sorted_indices])
             #np.save(self.dirpath + "pred_range.npy", pred_range)#[sorted_indices])
-            #np.save(self.dirpath + "true_positions.npy", true_positions)
+            np.save(self.dirpath + "true_positions.npy", true_positions)
             np.save(self.dirpath + "pred_positions.npy", pred_positions)
 
             # Compute overall evaluation metrics
