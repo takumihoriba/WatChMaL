@@ -91,6 +91,7 @@ def get_rootfile_eventid_hash(rootfiles, event_ids, fitqun=True):
     return combined_hash
 
 def plot_fitqun_comparison(plot_output, ax_e, ax_fitqun_e, ax_mu, ax_fitqun_mu, name, x_axis_name, print_out_acc=False):
+        print(name)
         #line 0 is the data, line 1 is the lower error, line 2 higher error
         ve_xdata = ax_e.lines[0].get_xdata()
         e_ml = ax_e.lines[0].get_ydata()
@@ -130,8 +131,8 @@ def plot_fitqun_comparison(plot_output, ax_e, ax_fitqun_e, ax_mu, ax_fitqun_mu, 
         plt.xlabel(x_axis_name)
         plt.ylabel("Electron Tagging Efficiency [%]")
         plt.legend()
-        if name == 'e_ve_combine':
-            plt.ylim(90,100)
+        #if name == 'e_ve_combine':
+        #    plt.ylim(90,100)
         #plt.figure(e_mom_fig_fitqun.number)
         plt.savefig(plot_output + 'e_'+name+'.png', format='png')
         plt.clf()
