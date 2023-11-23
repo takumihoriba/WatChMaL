@@ -441,7 +441,7 @@ class ClassifierEngine:
             
             # Variables for the confusion matrix
             #loss, accuracy, indices, labels, predictions, softmaxes, pred_range, true_range, rootfiles= [],[],[],[],[],[],[],[],[]
-            loss, accuracy, indices, labels, predictions, softmaxes, rootfiles= [],[],[],[],[],[],[],[],[]
+            loss, accuracy, indices, labels, predictions, softmaxes, rootfiles= [],[],[],[],[],[],[]
             #if regression:
             true_positions, pred_positions = [], []
             # Extract the event data and label from the DataLoader iterator
