@@ -22,8 +22,10 @@ def read_fitqun_file(file_path):
         discr = discr > e_1rmom*0.2
         discr = discr.astype(int)
         temp = np.abs(labels-discr)
-        print(f"fitqun avg: {1-np.sum(temp)/len(temp)}")
+        print(f"fitqun e- avg: {1-np.sum(temp[labels==1])/len(temp[labels==1])}")
+        print(f"fitqun mu- avg: {1-np.sum(temp[labels==0])/len(temp[labels==0])}")
         plt.hist(fitqun_1rmom, label = 'fiTQun', range=[0,1000], bins=10)
+        '''
         for mom in range(0,1000,100):
             temp_discr = discr[(fitqun_1rmom > mom) & (fitqun_1rmom < mom+100) ]
             temp_labels = labels[(fitqun_1rmom > mom) & (fitqun_1rmom < mom+100) ]
@@ -34,6 +36,7 @@ def read_fitqun_file(file_path):
         #plt.ylim(90,100)
         #plt.figure(e_mom_fig_fitqun.number)
         plt.savefig(file_path + 'fitqun_reco_mom.png', format='png')
+        '''
         return discr, labels, fitqun_1rmom, fitqun_hash
 
 def make_fitqunlike_discr(softmax, energies, labels):
@@ -91,7 +94,6 @@ def get_rootfile_eventid_hash(rootfiles, event_ids, fitqun=True):
     return combined_hash
 
 def plot_fitqun_comparison(plot_output, ax_e, ax_fitqun_e, ax_mu, ax_fitqun_mu, name, x_axis_name, print_out_acc=False):
-        print(name)
         #line 0 is the data, line 1 is the lower error, line 2 higher error
         ve_xdata = ax_e.lines[0].get_xdata()
         e_ml = ax_e.lines[0].get_ydata()
@@ -131,8 +133,7 @@ def plot_fitqun_comparison(plot_output, ax_e, ax_fitqun_e, ax_mu, ax_fitqun_mu, 
         plt.xlabel(x_axis_name)
         plt.ylabel("Electron Tagging Efficiency [%]")
         plt.legend()
-        #if name == 'e_ve_combine':
-        #    plt.ylim(90,100)
+        #plt.ylim(90,100)
         #plt.figure(e_mom_fig_fitqun.number)
         plt.savefig(plot_output + 'e_'+name+'.png', format='png')
         plt.clf()
@@ -141,9 +142,7 @@ def plot_fitqun_comparison(plot_output, ax_e, ax_fitqun_e, ax_mu, ax_fitqun_mu, 
         plt.xlabel(x_axis_name)
         plt.ylabel("Muon Mis-Tagging Efficiency [%]")
         plt.legend()
-
-        #if name == 'e_ve_combine':
-        #    plt.ylim(80,100)
+        #plt.ylim(90,100)
         #plt.figure(e_mom_fig_fitqun.number)
         plt.savefig(plot_output + 'mu_'+name+'.png', format='png')
-        plt.clf() # add to the other one
+        plt.clf()
