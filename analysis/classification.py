@@ -513,7 +513,7 @@ class WatChMaLClassification(ClassificationRun, WatChMaLOutput):
             print(signal_softmax[i])
             print(background_softmax[i])
             print(signal_softmax[i] + background_softmax[i]) # not a nan or zero
-            print(signal_softmax / (signal_softmax + background_softmax))
+            print(signal_softmax[i] / (signal_softmax[i] + background_softmax[i]))
         return signal_softmax / (signal_softmax + background_softmax)
 
     @property
