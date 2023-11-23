@@ -498,7 +498,7 @@ class ClassifierEngine:
         pred_positions      = np.array(pred_positions)
         
         #local_eval_results_dict = {"indices":indices, "labels":labels, "true_range":true_range, "predictions":predictions, "softmaxes":softmaxes, "pred_range": pred_range}
-        local_eval_results_dict = {"indices":indices, "labels":labels, "true_positions":true_positions, "predictions":predictions, "softmaxes":softmaxes, "pred_positions": pred_positions}
+        local_eval_results_dict = {"indices":indices, "labels":labels, "true_positions":true_positions, "predictions":predictions, "softmaxes":softmaxes, "pred_positions": pred_positions, "true_positions": true_positions}
 
         if self.is_distributed:
             # Gather results from all processes
@@ -512,7 +512,7 @@ class ClassifierEngine:
                 indices     = np.array(global_eval_results_dict["indices"].cpu())
                 labels      = np.array(global_eval_results_dict["labels"].cpu())
                 #true_range      = np.array(global_eval_results_dict["true_range"].cpu())
-                true_positions = np.array(global_eval_metrics_dict["true_positions"].cpu())
+                true_positions = np.array(global_eval_metrics_dict["true_positions"].cpu()) 
                 predictions = np.array(global_eval_results_dict["predictions"].cpu())
                 softmaxes   = np.array(global_eval_results_dict["softmaxes"].cpu())
                 #pred_range   = np.array(global_eval_results_dict["pred_range"].cpu())
