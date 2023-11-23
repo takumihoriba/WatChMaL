@@ -91,7 +91,7 @@ def momentum_from_energy(energy, label, particle_masses=np.array((105.7, 0.511, 
     np.ndarray or scalar
         array of momentum values for each energy, or scalar if only one energy
     """
-    mass = particle_masses[label]
+    mass = particle_masses[label] # momentum error but its okay
     return np.sqrt(energy**2 - mass**2)
 
 
