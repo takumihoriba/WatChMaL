@@ -506,8 +506,8 @@ class ClassifierEngine:
             global_eval_results_dict = self.get_synchronized_metrics(local_eval_results_dict)
             
             if self.rank == 0:
-                for name, tensor in zip(global_eval_metrics_dict.keys(), global_eval_metrics_dict.values()):
-                    local_eval_metrics_dict[name] = np.array(tensor.cpu())
+                #for name, tensor in zip(global_eval_metrics_dict.keys(), global_eval_metrics_dict.values()):
+                #    local_eval_metrics_dict[name] = np.array(tensor.cpu())
 
                 print(global_eval_metrics_dict)
                 
