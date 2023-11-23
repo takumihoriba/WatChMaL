@@ -17,7 +17,7 @@ model:
     _target_: watchmal.model.classifier.PassThrough
 engine:
   _target_: watchmal.engine.engine_classifier.ClassifierEngine
-  restore_path: /fast_scratch_2/aferreira/t2k/ml/data/resnet_sep22_emu_skdetsim_bugFix_0dwallCut_1/20092023-101855/
+  restore_path: /fast_scratch_2/aferreira/t2k/ml/data/resnet_sep22_emu_skdetsim_bugFix_0dwallCut_1/
 tasks:
   train:
     epochs: 0
