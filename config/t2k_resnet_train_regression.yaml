@@ -1,5 +1,5 @@
 data:
-  split_path: fast_scratch/WatChMaL/data/T2K/sep22_emu_2BugFixes_0dwallCut_1M_1/train_val_test_nFolds5_fold3.npz
+  split_path: /fast_scratch/WatChMaL/data/T2K/sep22_emu_2BugFixes_0dwallCut_1M_1/train_val_test_nFolds5_fold3.npz
   dataset:
     h5file: /fast_scratch/WatChMaL/data/T2K/sep22_emu_2BugFixes_0dwallCut_1M_1/combine_combine.hy
     _target_: watchmal.dataset.cnn.cnn_dataset.CNNDataset
