@@ -189,7 +189,7 @@ class ClassifierEngine:
             #print(f"True range: {primary_range}")
             #print(f"Pred range: {model_out[1]}")
             self.loss_r = self.criterion_r(model_out[1], positions)
-            mult = 1e-0
+            mult = 1e3 #1e-0
             self.loss = self.loss_c + mult*(self.loss_r)
             accuracy = (predicted_labels == labels).sum().item() / float(predicted_labels.nelement())
 
@@ -501,8 +501,8 @@ class ClassifierEngine:
         local_eval_results_dict = {"indices":indices, "labels":labels, "predictions":predictions, "softmaxes":softmaxes, "pred_positions": pred_positions, "true_positions": true_positions}
 
         print(self.is_distributed)
-        if False:
-        #if self.is_distributed: # not distributed, how does it still end up here?
+        #if False:
+        if self.is_distributed: # not distributed, how does it still end up here?
             # Gather results from all processes
             global_eval_metrics_dict = self.get_synchronized_metrics(local_eval_metrics_dict)
             global_eval_results_dict = self.get_synchronized_metrics(local_eval_results_dict)
