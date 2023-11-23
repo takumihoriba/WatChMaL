@@ -500,7 +500,9 @@ class ClassifierEngine:
         #local_eval_results_dict = {"indices":indices, "labels":labels, "true_range":true_range, "predictions":predictions, "softmaxes":softmaxes, "pred_range": pred_range}
         local_eval_results_dict = {"indices":indices, "labels":labels, "predictions":predictions, "softmaxes":softmaxes, "pred_positions": pred_positions, "true_positions": true_positions}
 
-        if self.is_distributed:
+        print(self.is_distributed)
+        if False:
+        #if self.is_distributed: # not distributed, how does it still end up here?
             # Gather results from all processes
             global_eval_metrics_dict = self.get_synchronized_metrics(local_eval_metrics_dict)
             global_eval_results_dict = self.get_synchronized_metrics(local_eval_results_dict)
