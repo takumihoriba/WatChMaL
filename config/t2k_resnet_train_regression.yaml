@@ -17,7 +17,7 @@ model:
     _target_: watchmal.model.classifier.PassThrough
 engine:
   _target_: watchmal.engine.engine_classifier.ClassifierEngine
-  restore_path: 0
+  restore_path: /fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE/nov23_normed_regression/20092023-101855/
 tasks:
   train:
     epochs: 10
@@ -26,7 +26,7 @@ tasks:
     num_val_batches: 32
     checkpointing: false
     early_stopping_patience: 3
-    restore_best_state: false
+    restore_best_state: true
     data_loaders:
       train:
         split_key: train_idxs
@@ -57,6 +57,7 @@ tasks:
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
 gpu_list: 
+- 4
 - 5
 seed: null
 dump_path: ./outputs/
