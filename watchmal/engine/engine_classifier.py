@@ -188,8 +188,10 @@ class ClassifierEngine:
             self.loss_c = self.criterion(model_out[0], labels)
             #print(f"True range: {primary_range}")
             #print(f"Pred range: {model_out[1]}")
-            self.loss_r = self.criterion_r(model_out[1], positions)
-            mult = 1e5 #1e-0
+            self.loss_r = self.criterion_r(model_out[1], positions)*1000
+            #mult = 1e7 #1e-0 # classificatioon is still leading
+            mult = 1
+            print(mult)
             self.loss = self.loss_c + mult*(self.loss_r)
             accuracy = (predicted_labels == labels).sum().item() / float(predicted_labels.nelement())
 
