@@ -404,10 +404,18 @@ class ClassifierEngine:
             val_metrics["accuracy"] = global_val_accuracy
             val_metrics["epoch"] = self.epoch
 
+            '''
             if val_metrics["loss_c"] < self.best_validation_loss:
                 self.best_validation_loss = val_metrics["loss_c"]
                 self.best_iteration = self.iteration
                 print('best validation loss so far!: {}'.format(self.best_validation_loss))
+                self.save_state("BEST")
+                val_metrics["saved_best"] = 1
+            '''
+            if val_metrics["loss_r"] < self.best_validation_loss:
+                self.best_validation_loss = val_metrics["loss_r"]
+                self.best_iteration = self.iteration
+                print('best (REGRESSION) validation loss so far!: {}'.format(self.best_validation_loss))
                 self.save_state("BEST")
                 val_metrics["saved_best"] = 1
             elif self.iteration - self.best_iteration >= int(early_stopping_patience*iterations_per_epoch):
