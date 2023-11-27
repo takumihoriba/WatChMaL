@@ -19,13 +19,15 @@ def normalize(data, x_bounds=(-1600,1600), y_bounds=(-1600,1600), z_bounds=(-160
     rough values in here for now
 
     to be run on each event invidually
+
     '''
     bounds = [x_bounds, y_bounds, z_bounds]
     for i in range(3):
-        data[i] = ((data[i] - bounds[i][0])/(bounds[i][1] - bounds[i][0]))
+        #data[i] = ((data[i] - bounds[i][0])/(bounds[i][1] - bounds[i][0]))
 
-    #normed_data = 
-    #return normed_data
+        #--> changed to go [-1,1] instead of [0,1]
+        data[i] /= bounds[i][1]
+        
     return data
 
 class H5CommonDataset(Dataset, ABC):
