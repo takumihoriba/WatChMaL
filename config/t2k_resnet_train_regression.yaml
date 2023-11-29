@@ -17,7 +17,7 @@ model:
     _target_: watchmal.model.classifier.PassThrough
 engine:
   _target_: watchmal.engine.engine_classifier.ClassifierEngine
-  restore_path: /fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE/nov27_normed_regression_only/20092023-101855/
+  restore_path: 0
 tasks:
   train:
     epochs: 0
@@ -26,7 +26,7 @@ tasks:
     num_val_batches: 32
     checkpointing: false
     early_stopping_patience: 3
-    restore_best_state: true
+    restore_best_state: false
     data_loaders:
       train:
         split_key: train_idxs
@@ -43,7 +43,7 @@ tasks:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
     optimizers:
       _target_: torch.optim.Adam
-      lr: 0.0001
+      lr: 0.01
       weight_decay: 0
     scheduler:
       _target_: torch.optim.lr_scheduler.ExponentialLR
@@ -57,6 +57,7 @@ tasks:
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
 gpu_list: 
-- 2
+- 4
+- 5
 seed: null
 dump_path: ./outputs/
