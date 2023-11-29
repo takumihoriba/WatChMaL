@@ -38,8 +38,9 @@ def read_fitqun_file(file_path, regression=False):
         plt.savefig(file_path + 'fitqun_reco_mom.png', format='png')
         '''
         if regression:
-            mu_1rpos = np.ravel(h5fw['mu_1rpos'])
-            e_1rpos = np.ravel(h5fw['e_1rpos'])
+            mu_1rpos = np.array(h5fw['mu_1rpos'])
+            e_1rpos = np.array(h5fw['e_1rpos'])
+            print(e_1rpos.shape, mu_1rpos.shape)
             return (discr, labels, fitqun_1rmom, fitqun_hash), (mu_1rpos, e_1rpos)
         else:
             return discr, labels, fitqun_1rmom, fitqun_hash
