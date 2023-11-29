@@ -6,7 +6,7 @@ import matplotlib
 from matplotlib import pyplot as plt
 import analysis.utils.binning as bins
 
-def read_fitqun_file(file_path):
+def read_fitqun_file(file_path, regression=False):
     with h5py.File(file_path,mode='r') as h5fw:
         print(h5fw.keys())
         fitqun_hash = get_rootfile_eventid_hash(np.ravel(h5fw['root_files']), np.ravel(h5fw['event_ids']), fitqun=True)
@@ -37,7 +37,12 @@ def read_fitqun_file(file_path):
         #plt.figure(e_mom_fig_fitqun.number)
         plt.savefig(file_path + 'fitqun_reco_mom.png', format='png')
         '''
-        return discr, labels, fitqun_1rmom, fitqun_hash
+        if regression:
+            mu_1rpos = np.ravel(h5fw['mu_1rpos'])
+            e_1rpos = np.ravel(h5fw['e_1rpos'])
+            return (discr, labels, fitqun_1rmom, fitqun_hash), (mu_1rpos, e_1rpos)
+        else:
+            return discr, labels, fitqun_1rmom, fitqun_hash
 
 def make_fitqunlike_discr(softmax, energies, labels):
     discr = softmax[:,1]-softmax[:,0]
@@ -146,3 +151,85 @@ def plot_fitqun_comparison(plot_output, ax_e, ax_fitqun_e, ax_mu, ax_fitqun_mu, 
         #plt.figure(e_mom_fig_fitqun.number)
         plt.savefig(plot_output + 'mu_'+name+'.png', format='png')
         plt.clf()
+
+
+
+def regression_analysis(true_positions, pred_positions):
+    '''
+    - scatter plot of pred vs true
+    - residual histogram
+    '''
+    vertex_axis = ['X', 'Y', 'Z']
+    for i in range(3): 
+        line = np.linspace(-1600,1600,10)
+        plt.figure(figsize=(5,5))
+        color = plt.rcParams["axes.prop_cycle"].by_key()["color"][i]
+        plt.scatter(true_positions[:,i], pred_positions[:,i], alpha=0.05, s=0.1, color=color)
+        plt.plot(line, line, '--', color='black', alpha=0.5)
+        plt.xlim(-2000,2000)
+        plt.ylim(-2000,2000)
+        
+        plt.title(f'Event Vertex for {vertex_axis[i]} Axis')
+        plt.xlabel('True Position [cm]')
+        plt.ylabel('Predicted Position [cm]')
+        plt.show()
+
+        residuals = true_positions[:,i] - pred_positions[:,i]
+        residuals_div = residuals/(true_positions[:,i])
+        residuals_cut = [] 
+        residuals_div_cut = []
+        cut = 1600
+        
+        for r in range(len(residuals)):
+            if -cut < residuals[r] <  cut:
+                residuals_cut.append(residuals[r])
+            if -cut < residuals_div[r] < cut:
+                residuals_div_cut.append(residuals_div[r])
+
+        plt.hist(residuals_cut, bins=50, alpha=0.7, color=color)
+        plt.xlim(-cut, cut)
+
+        plt.title(f'Event Vertex for {vertex_axis[i]} Axis')
+        plt.xlabel('true - predicted [cm]')
+        plt.ylabel('count')
+        plt.show()
+
+        plt.hist(residuals_div_cut, bins=50, alpha=0.7, color=color)
+        plt.xlim(-cut, cut)
+        
+
+        plt.title(f'Event Vertex for {vertex_axis[i]} Axis')
+        plt.xlabel('(true - predicted)/true')
+        plt.ylabel('count')
+        plt.show()
+        
+
+def un_normalize(data, x_bounds=(-1600,1600), y_bounds=(-1600,1600), z_bounds=(-1600,1600)):
+    '''
+    '''
+    bounds = [x_bounds, y_bounds, z_bounds]
+    for i in range(3):
+        data[i] = ((data[i])*(bounds[i][1] - bounds[i][0])) + bounds[i][0] 
+        
+    return data
+
+def plot_regression_results(file_path = '/fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE/fitqun_combine.hy'):
+    '''
+    looking at 
+    e_1rpos[3]  	        	Electron hypothesis vertex position (3D, x=0, y=1, z=2)
+    mu_1rpos[3] 	                Muon hypothesis vertex position (3D, x=0, y=1, z=2)
+    '''
+    (discr, labels, fitqun_1rmom, fitqun_hash), (mu_1rpos, e_1rpos) = read_fitqun_file(file_path, regression=True)
+
+    dirpath = '/fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE/nov26_normed_regression_only/20092023-101855/'
+    true_positions = np.load(dirpath + "true_positions.npy")
+    tp, = []
+    for t in true_positions:
+        tp.append(un_normalize(t))
+    true_positions = np.array(tp)
+
+    # in future read in same generic plotting stuff
+    regression_analysis(true_positions, e_1rpos)
+    regression_analysis(true_positions, mu_1rpos)
+
+    
