@@ -30,14 +30,14 @@ tasks:
     data_loaders:
       train:
         split_key: train_idxs
-        batch_size: 256
+        batch_size: 64
         num_workers: 2
         transforms:
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
       validation:
         split_key: val_idxs
-        batch_size: 128
+        batch_size: 256
         num_workers: 2
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
@@ -52,7 +52,7 @@ tasks:
     data_loaders:
       test:
         split_key: test_idxs
-        batch_size: 128
+        batch_size: 256
         num_workers: 2
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
