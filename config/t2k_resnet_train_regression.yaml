@@ -20,13 +20,13 @@ engine:
   restore_path: /fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE/dec5_normed_regression_resnet152/20092023-101855/
 tasks:
   train:
-    epochs: 0
+    epochs: 1
     report_interval: 100
     val_interval: 100
     num_val_batches: 32
     checkpointing: true
     early_stopping_patience: 3
-    restore_best_state: true
+    restore_best_state: false
     data_loaders:
       train:
         split_key: train_idxs
@@ -58,5 +58,6 @@ tasks:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
 gpu_list: 
 - 0
+- 4
 seed: null
 dump_path: ./outputs/
