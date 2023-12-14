@@ -454,6 +454,7 @@ class ClassifierEngine:
             loss, accuracy, indices, labels, predictions, softmaxes, rootfiles= [],[],[],[],[],[],[]
             #if regression:
             true_positions, pred_positions = [], []
+            wall, to_wall, energy, num_pmt, directions = [], [], [], [], []
             # Extract the event data and label from the DataLoader iterator
             for it, eval_data in enumerate(self.data_loaders["test"]):
                 
@@ -462,7 +463,12 @@ class ClassifierEngine:
                 self.labels = eval_data['labels']
                 #self.range = eval_data['range']
                 #if regression: 
-                self.positions = eval_data['positions']
+                self.positions = eval_data['positions'] # where did this add in? need to add in the rest
+                self.wall = eval_data['wall']
+                self.to_wall = eval_data['to_wall']
+                self.energy = eval_data['energy']
+                self.num_pmt = eval_data['num_pmt']
+                self.directions = eval_data['directions']
 
                 eval_indices = eval_data['indices']
                 eval_rootfile = eval_data['root_files']
@@ -483,6 +489,11 @@ class ClassifierEngine:
                 softmaxes.extend(result["softmax"].detach().cpu().numpy())
                 #pred_range.extend(result["pred_range"].detach().cpu().numpy())
                 pred_positions.extend(result["pred_positions"].detach().cpu().numpy())
+                wall.extend(self.wall.numpy())
+                to_wall.extend(self.to_wall.numpy())
+                energy.extend(self.energy.numpy())
+                num_pmt.extend(self.num_pmt.numpy())
+                directions.extend(self.directions.numpy())
            
                 print("eval_iteration : " + str(it) + " eval_loss : " + str(result["loss"]) + " eval_accuracy : " + str(result["accuracy"]))
             
@@ -502,6 +513,13 @@ class ClassifierEngine:
         labels      = np.array(labels)
         #true_range      = np.array(true_range)
         true_positions    = np.array(true_positions)
+        wall = np.array(wall)
+        to_wall = np.array(to_wall)
+        directions = np.array(directions)
+        num_pmt = np.array(num_pmt)
+        energy = np.array(energy)
+
+
         predictions = np.array(predictions)
         softmaxes   = np.array(softmaxes)
         #pred_range   = np.array(pred_range)
@@ -542,13 +560,18 @@ class ClassifierEngine:
             print(f"Saving Data to {self.dirpath}...")
             np.save(self.dirpath + "indices.npy", indices)#sorted_indices)
             np.save(self.dirpath + "rootfiles.npy", rootfiles)#sorted_indices)
-            np.save(self.dirpath + "labels.npy", labels)#[sorted_indices])
-            np.save(self.dirpath + "predictions.npy", predictions)#[sorted_indices])
+            np.save(self.dirpath + "true_class.npy", labels)#[sorted_indices])
+            np.save(self.dirpath + "pred_class.npy", predictions)#[sorted_indices])
             np.save(self.dirpath + "softmax.npy", softmaxes)#[sorted_indices])
             #np.save(self.dirpath + "true_range.npy", true_range)#[sorted_indices])
             #np.save(self.dirpath + "pred_range.npy", pred_range)#[sorted_indices])
             np.save(self.dirpath + "true_positions.npy", true_positions)
             np.save(self.dirpath + "pred_positions.npy", pred_positions)
+            np.save(self.dirpath + "wall.npy", wall)
+            np.save(self.dirpath + "to_wall.npy", to_wall)
+            np.save(self.dirpath + "energy.npy", energy) # add below into notebook
+            np.save(self.dirpath + "num_pmt.npy", num_pmt)
+            np.save(self.dirpath + "directions.npy", directions)
 
             # Compute overall evaluation metrics
             val_iterations = np.sum(local_eval_metrics_dict["eval_iterations"])
