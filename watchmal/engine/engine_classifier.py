@@ -14,8 +14,8 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 from torchmetrics import AUROC, ROC
 
-import torch.onnx
-save_onnx = True
+import torch.onnx # likely need to move to CPU to use this
+save_onnx = False
 
 # generic imports
 from math import floor, ceil
