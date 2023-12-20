@@ -154,7 +154,7 @@ class H5CommonDataset(Dataset, ABC):
             "wall": self.wall[item], # how to get this?
             "to_wall": self.towall[item],
             "directions": self.directions[item],
-            "num_pmt": self.num_pmt[item]
+            "num_pmt": self.num_pmt[item],
             # "angles": self.angles[item],
             "positions": positions,
             #np.expand_dims(self.positions[item], axis=1), #self.positions[item].unsqueeze(1), # pred or true?
