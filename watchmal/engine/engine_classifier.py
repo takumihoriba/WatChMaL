@@ -258,6 +258,7 @@ class ClassifierEngine:
         try:
             with self.model.join(throw_on_early_termination=True):
                 self.run_epoch(epochs, report_interval, val_interval, num_val_batches, checkpointing, early_stopping_patience, save_interval, val_iter)
+        '''
         except Exception as error:
             if not self.is_distributed:
                 print(f"Not running multi-processing: {self.rank}")
@@ -266,6 +267,7 @@ class ClassifierEngine:
                 print('###########################\n', error)
                 traceback.print_exc() 
             pass 
+        '''
         
         self.train_log.close()
         if self.rank == 0:
