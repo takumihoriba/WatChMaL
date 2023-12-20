@@ -14,6 +14,9 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 from torchmetrics import AUROC, ROC
 
+import torch.onnx
+save_onnx = True
+
 # generic imports
 from math import floor, ceil
 import numpy as np
@@ -474,7 +477,7 @@ class ClassifierEngine:
                 eval_rootfile = eval_data['root_files']
                 
                 # Run the forward procedure and output the result
-                result = self.forward(train=False) # how to access this dictionairy?
+                result = self.forward(train=False) 
 
                 eval_loss += result['loss']
                 eval_acc  += result['accuracy']
@@ -498,7 +501,7 @@ class ClassifierEngine:
                 print("eval_iteration : " + str(it) + " eval_loss : " + str(result["loss"]) + " eval_accuracy : " + str(result["accuracy"]))
             
                 eval_iterations += 1
-        
+
         # convert arrays to torch tensors
         print("loss : " + str(eval_loss/eval_iterations) + " accuracy : " + str(eval_acc/eval_iterations))
 
@@ -550,7 +553,6 @@ class ClassifierEngine:
                 #pred_range   = np.array(global_eval_results_dict["pred_range"].cpu())
                 pred_positions = np.array(global_eval_metrics_dict["pred_positions"].cpu())
 
-
         
         if self.rank == 0:
 #            print("Sorting Outputs...")
@@ -572,6 +574,10 @@ class ClassifierEngine:
             ##np.save(self.dirpath + "energy.npy", energy) # add below into notebook
             ##np.save(self.dirpath + "num_pmt.npy", num_pmt)
             ##np.save(self.dirpath + "directions.npy", directions)
+
+            if save_onnx:
+                onnx_program = torch.onnx.dynamo_export(self.model, self.data)
+                onnx_program.save(self.dirpath + "/model_arch.onnx")
 
             # Compute overall evaluation metrics
             val_iterations = np.sum(local_eval_metrics_dict["eval_iterations"])

@@ -10,7 +10,7 @@ model:
   _target_: watchmal.model.classifier.Classifier
   num_classes: 2
   feature_extractor:
-    _target_: watchmal.model.resnet.resnet101
+    _target_: watchmal.model.resnet.resnet34
     num_input_channels: 2
     num_output_channels: 2
   classification_network:
