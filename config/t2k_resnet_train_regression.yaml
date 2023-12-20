@@ -30,8 +30,8 @@ tasks:
     data_loaders:
       train:
         split_key: train_idxs
-        batch_size: 624
-        num_workers: 3
+        batch_size: 512
+        num_workers: 2
         transforms:
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
