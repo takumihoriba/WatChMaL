@@ -81,11 +81,11 @@ class H5CommonDataset(Dataset, ABC):
         self.positions  = np.array(self.h5_file["positions"])
 
 #        self.angles     = np.array(self.h5_file["angles"])
-        self.energy   = np.array(self.h5_file["energies"])
-        self.wall = np.array(self.h5_file["wall"])
-        self.towall = np.array(self.h5_file["towall"])
-        self.num_pmt = np.array(self.h5_file["num_pmt"])
-        self.directions = np.array(self.h5_file["directions"])
+        ##self.energy   = np.array(self.h5_file["energies"])
+        ##self.wall = np.array(self.h5_file["wall"])
+        ##self.towall = np.array(self.h5_file["towall"])
+        ##self.num_pmt = np.array(self.h5_file["num_pmt"])
+        ##self.directions = np.array(self.h5_file["directions"])
 #        if "veto" in self.h5_file.keys():
 #            self.veto  = np.array(self.h5_file["veto"])
 #            self.veto2 = np.array(self.h5_file["veto2"])
@@ -150,11 +150,11 @@ class H5CommonDataset(Dataset, ABC):
         data_dict = {
             "labels": self.labels[item].astype(np.int64),
             #"range": self.range[item].astype(np.float32),
-            "energy": self.energies[item],
-            "wall": self.wall[item], # how to get this?
-            "to_wall": self.towall[item],
-            "directions": self.directions[item],
-            "num_pmt": self.num_pmt[item],
+            ##"energy": self.energies[item],
+            ##"wall": self.wall[item], # how to get this?
+            ##"to_wall": self.towall[item],
+            ##"directions": self.directions[item],
+            ##"num_pmt": self.num_pmt[item],
             # "angles": self.angles[item],
             "positions": positions,
             #np.expand_dims(self.positions[item], axis=1), #self.positions[item].unsqueeze(1), # pred or true?
