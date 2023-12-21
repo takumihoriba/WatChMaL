@@ -10,7 +10,7 @@ model:
   _target_: watchmal.model.classifier.Classifier
   num_classes: 2
   feature_extractor:
-    _target_: watchmal.model.resnet.resnet101
+    _target_: watchmal.model.resnet.resnet152
     num_input_channels: 2
     num_output_channels: 2
   classification_network:
@@ -20,7 +20,7 @@ engine:
   restore_path: 0
 tasks:
   train:
-    epochs: 10
+    epochs: 20
     report_interval: 100
     val_interval: 100
     num_val_batches: 320
@@ -43,7 +43,7 @@ tasks:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
     optimizers:
       _target_: torch.optim.Adam
-      lr: 0.0001
+      lr: 0.001
       weight_decay: 0
     scheduler:
       _target_: torch.optim.lr_scheduler.ExponentialLR
