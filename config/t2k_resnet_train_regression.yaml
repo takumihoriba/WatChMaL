@@ -43,7 +43,7 @@ tasks:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
     optimizers:
       _target_: torch.optim.Adam
-      lr: 0.001
+      lr: 0.0001
       weight_decay: 0
     scheduler:
       _target_: torch.optim.lr_scheduler.ExponentialLR
@@ -57,7 +57,7 @@ tasks:
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
 gpu_list: 
-- 6
-- 7
+- 2
+- 3
 seed: null
 dump_path: ./outputs/
