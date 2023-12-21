@@ -23,7 +23,7 @@ tasks:
     epochs: 10
     report_interval: 100
     val_interval: 100
-    num_val_batches: 32
+    num_val_batches: 320
     checkpointing: true
     early_stopping_patience: 3
     restore_best_state: false
@@ -37,7 +37,7 @@ tasks:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
       validation:
         split_key: val_idxs
-        batch_size: 128
+        batch_size: 256
         num_workers: 2
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
@@ -52,12 +52,12 @@ tasks:
     data_loaders:
       test:
         split_key: test_idxs
-        batch_size: 128
+        batch_size: 256
         num_workers: 2
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
 gpu_list: 
-- 2
-- 3
+- 6
+- 7
 seed: null
 dump_path: ./outputs/

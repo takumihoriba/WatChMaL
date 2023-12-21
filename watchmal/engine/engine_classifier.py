@@ -193,8 +193,8 @@ class ClassifierEngine:
             #print(f"Pred range: {model_out[1]}")
             self.loss_r = self.criterion_r(model_out[1], positions)#*1000
             #mult = 1e7 #1e-0 # classificatioon is still leading
-            mult_r = 1
-            mult_c = 0
+            mult_r = 1.0
+            mult_c = 0.0
             self.loss = mult_c*self.loss_c + mult_r*(self.loss_r)
             #self.loss = self.loss_r # using just simple regression loss here
             accuracy = (predicted_labels == labels).sum().item() / float(predicted_labels.nelement())
