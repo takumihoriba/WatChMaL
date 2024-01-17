@@ -181,7 +181,6 @@ class ClassifierEngine:
                       'pred_range': pred_range,
                       'raw_pred_labels': model_out[0]}
 
-            print(f"LABELS: {labels}")
             self.loss_c = self.criterion(model_out[0], labels)
             #print(f"True range: {primary_range}")
             #print(f"Pred range: {model_out[1]}")

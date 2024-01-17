@@ -14,6 +14,10 @@ def read_fitqun_file(file_path):
         mu_1rnll = np.ravel(h5fw['mu_1rnll'])
         e_1rmom = np.ravel(h5fw['e_1rmom'])
         mu_1rmom = np.ravel(h5fw['mu_1rmom'])
+        e_1rpos = np.ravel(h5fw['e_1rpos'])
+        mu_1rpos = np.ravel(h5fw['mu_1rpos'])
+        pi_1rnll = np.ravel(h5fw['pi_1rnll'])
+        pi_1rmom = np.ravel(h5fw['pi_1rmom'])
         labels = np.ravel(h5fw['labels'])
         fitqun_1rmom = np.ones(len(e_1rmom))
         fitqun_1rmom[labels==0] = mu_1rmom[labels==0]
@@ -21,6 +25,13 @@ def read_fitqun_file(file_path):
         discr = -e_1rnll + mu_1rnll 
         discr = discr > e_1rmom*0.2
         discr = discr.astype(int)
+
+        discr_pi = mu_1rnll - pi_1rnll 
+        print(mu_1rmom)
+        discr_pi = discr_pi < mu_1rmom*0.15
+        discr_pi = discr_pi.astype(int)
+        print(f"discr pi: {np.unique(discr_pi,return_counts=True)}")
+
         temp = np.abs(labels-discr)
         print(f"fitqun e- avg: {1-np.sum(temp[labels==1])/len(temp[labels==1])}")
         print(f"fitqun mu- avg: {1-np.sum(temp[labels==0])/len(temp[labels==0])}")
@@ -37,7 +48,7 @@ def read_fitqun_file(file_path):
         #plt.figure(e_mom_fig_fitqun.number)
         plt.savefig(file_path + 'fitqun_reco_mom.png', format='png')
         '''
-        return discr, labels, fitqun_1rmom, fitqun_hash
+        return discr, discr_pi, labels, fitqun_1rmom, fitqun_hash, e_1rpos, mu_1rpos
 
 def make_fitqunlike_discr(softmax, energies, labels):
     discr = softmax[:,1]-softmax[:,0]
@@ -139,6 +150,7 @@ def plot_fitqun_comparison(plot_output, ax_e, ax_fitqun_e, ax_mu, ax_fitqun_mu, 
         plt.clf()
         plt.errorbar(ve_xdata, mu_ml, yerr=[mu_ml-mu_ml_low_err, mu_ml_hi_err-mu_ml], color='blue', label = 'ML', linestyle='', capsize=3)
         plt.errorbar(ve_xdata, mu_fitqun, yerr=[mu_fitqun-mu_fitqun_low_err, mu_fitqun_hi_err-mu_fitqun], color='red', label = 'fiTQun', linestyle='', capsize=3)
+        print(mu_fitqun)
         plt.xlabel(x_axis_name)
         plt.ylabel("Muon Mis-Tagging Efficiency [%]")
         plt.legend()
