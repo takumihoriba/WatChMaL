@@ -28,6 +28,10 @@ import copy
 from watchmal.dataset.data_utils import get_data_loader
 from watchmal.utils.logging_utils import CSVData
 
+#Visualization
+from torchviz import make_dot
+
+
 
 class ClassifierEngine:
     """Engine for performing training or evaluation  for a classification network."""
@@ -77,9 +81,8 @@ class ClassifierEngine:
         # define the placeholder attributes
         self.data = None
         self.labels = None
-        self.range = None
+        self.xvert = None
         self.loss = None
-        self.loss_c = None
         self.loss_r = None
 
         # logging attributes
@@ -88,7 +91,6 @@ class ClassifierEngine:
         if self.rank == 0:
             self.val_log = CSVData(self.dirpath + "log_val.csv")
 
-        self.criterion = nn.CrossEntropyLoss()
         self.criterion_r = nn.HuberLoss()
         self.softmax = nn.Softmax(dim=1)
         
@@ -168,30 +170,26 @@ class ClassifierEngine:
             # Move the data and the labels to the GPU (if using CPU this has no effect)
             data = self.data.to(self.device)
             labels = self.labels.to(self.device)
-            primary_range = self.range.to(self.device)
+            xvert = self.xvert.to(self.device)
 
+            #print(self.model(data))
             model_out = self.model(data)
+            if train and False:
+                make_dot(model_out, params=dict(list(self.model.named_parameters()))).render("rnn_torchviz_rOnly", format="png")
+                quit()
             
-            softmax = self.softmax(model_out[0])
-            pred_range = model_out[1]
-            predicted_labels = torch.argmax(model_out[0], dim=-1)
+            pred_xvert = torch.ravel(model_out)
+            #print(f'PRED_XVERT: {pred_xvert}')
+            #print(f'TRUE_XVERT: {xvert}')
 
-            result = {'predicted_labels': predicted_labels,
-                      'softmax': softmax,
-                      'pred_range': pred_range,
-                      'raw_pred_labels': model_out[0]}
+            result = {'true_xvert': xvert,
+                      'pred_xvert': pred_xvert}
 
-            self.loss_c = self.criterion(model_out[0], labels)
             #print(f"True range: {primary_range}")
             #print(f"Pred range: {model_out[1]}")
-            self.loss_r = self.criterion_r(model_out[1], primary_range)
-            self.loss = self.loss_c + 0*(self.loss_r)
-            accuracy = (predicted_labels == labels).sum().item() / float(predicted_labels.nelement())
+            self.loss = self.criterion_r(pred_xvert, xvert)
 
             result['loss'] = float(self.loss.item())
-            result['loss_c'] = float(self.loss_c.item())
-            result['loss_r'] = float(self.loss_r.item())
-            result['accuracy'] = accuracy
         
         return result
     
@@ -285,10 +283,12 @@ class ClassifierEngine:
                         # Train on batch
                 self.data = train_data['data']
                 self.labels = train_data['labels']
-                self.range = train_data['range']
+                self.xvert = train_data['xvert']
+                #print(f'MEAN XVERT: {np.mean(self.xvert.numpy()*1800)}')
 
                         # Call forward: make a prediction & measure the average error using data = self.data
                 res = self.forward(True)
+
 
                         #Call backward: backpropagate error and update weights using loss = self.loss
                 self.backward()
@@ -299,7 +299,7 @@ class ClassifierEngine:
                 self.iteration += 1
                         
                         # get relevant attributes of result for logging
-                train_metrics = {"iteration": self.iteration, "epoch": self.epoch, "loss": res["loss"], "accuracy": res["accuracy"]}
+                train_metrics = {"iteration": self.iteration, "epoch": self.epoch, "loss": res["loss"]}
                         
                         # record the metrics for the mini-batch in the log
                 self.train_log.record(train_metrics)
@@ -311,10 +311,11 @@ class ClassifierEngine:
                     previous_iteration_time = iteration_time
                     iteration_time = time()
 
-                    print("... Iteration %d ... Epoch %d ... Step %d/%d  ... Training Classification Loss %1.3f ... Training Regression Loss %1.3f ... Training Accuracy %1.3f ... Time Elapsed %1.3f ... Iteration Time %1.3f" %
-                                (self.iteration, self.epoch+1, self.step, len(train_loader), res["loss_c"], res["loss_r"], res["accuracy"], iteration_time - start_time, iteration_time - previous_iteration_time))
+                    print("... Iteration %d ... Epoch %d ... Step %d/%d  ... Training Loss %1.3f  ... Time Elapsed %1.3f ... Iteration Time %1.3f" %
+                                (self.iteration, self.epoch+1, self.step, len(train_loader), res["loss"], iteration_time - start_time, iteration_time - previous_iteration_time))
 
                 if early_stop:
+                    print("EARLY STOP")
                     break
                                         
             if self.scheduler is not None:
@@ -341,7 +342,7 @@ class ClassifierEngine:
         """
         # set model to eval mode
         self.model.eval()
-        val_metrics = {"iteration": self.iteration, "loss": 0., "loss_c": 0., "loss_r": 0., "accuracy": 0., "saved_best": 0}
+        val_metrics = {"iteration": self.iteration, "loss": 0., "saved_best": 0}
         for val_batch in range(num_val_batches):
             try:
                 val_data = next(val_iter)
@@ -354,22 +355,16 @@ class ClassifierEngine:
             # extract the event data from the input data tuple
             self.data = val_data['data']
             self.labels = val_data['labels']
-            self.range = val_data['range']
+            self.xvert = val_data['xvert']
 
             val_res = self.forward(False)
 
             val_metrics["loss"] += val_res["loss"]
-            val_metrics["loss_c"] += val_res["loss_c"]
-            val_metrics["loss_r"] += val_res["loss_r"]
-            val_metrics["accuracy"] += val_res["accuracy"]
         # return model to training mode
         self.model.train()
         # record the validation stats
         val_metrics["loss"] /= num_val_batches
-        val_metrics["loss_c"] /= num_val_batches
-        val_metrics["loss_r"] /= num_val_batches
-        val_metrics["accuracy"] /= num_val_batches
-        local_val_metrics = {"loss": np.array([val_metrics["loss"]]), "loss_c": np.array([val_metrics["loss_c"]]), "loss_r": np.array([val_metrics["loss_r"]]), "accuracy": np.array([val_metrics["accuracy"]])}
+        local_val_metrics = {"loss": np.array([val_metrics["loss"]])}
 
         if self.is_distributed:
             global_val_metrics = self.get_synchronized_metrics(local_val_metrics)
@@ -381,18 +376,12 @@ class ClassifierEngine:
         if self.rank == 0:
             # Save if this is the best model so far
             global_val_loss = np.mean(global_val_metrics["loss"])
-            global_val_loss_c = np.mean(global_val_metrics["loss_c"])
-            global_val_loss_r = np.mean(global_val_metrics["loss_r"])
-            global_val_accuracy = np.mean(global_val_metrics["accuracy"])
 
             val_metrics["loss"] = global_val_loss
-            val_metrics["loss_c"] = global_val_loss_c
-            val_metrics["loss_r"] = global_val_loss_r
-            val_metrics["accuracy"] = global_val_accuracy
             val_metrics["epoch"] = self.epoch
 
-            if val_metrics["loss_c"] < self.best_validation_loss:
-                self.best_validation_loss = val_metrics["loss_c"]
+            if val_metrics["loss"] < self.best_validation_loss:
+                self.best_validation_loss = val_metrics["loss"]
                 self.best_iteration = self.iteration
                 print('best validation loss so far!: {}'.format(self.best_validation_loss))
                 self.save_state("BEST")
@@ -400,7 +389,7 @@ class ClassifierEngine:
             elif self.iteration - self.best_iteration >= int(early_stopping_patience*iterations_per_epoch):
                 print("DOING EARLY STOPPING")
                 self.do_early_stop=True
-            print(f'CHECK early stopping: Iteration: {self.iteration}, best iteration: {self.best_iteration}, val loss: {val_metrics["loss"]}, val regression loss: {val_metrics["loss_r"]}, val classification loss: {val_metrics["loss_c"]}, best val classification loss: {self.best_validation_loss}, val acc: {val_metrics["accuracy"]}, patience: {early_stopping_patience*iterations_per_epoch}')
+            print(f'CHECK early stopping: Iteration: {self.iteration}, best iteration: {self.best_iteration}, val loss: {val_metrics["loss"]}, best val classification loss: {self.best_validation_loss}, patience: {early_stopping_patience*iterations_per_epoch}')
 
             # Save the latest model if checkpointing
             if checkpointing:
@@ -421,7 +410,6 @@ class ClassifierEngine:
         
         # Variables to output at the end
         eval_loss = 0.0
-        eval_acc = 0.0
         eval_iterations = 0
         
         # Iterate over the validation set to calculate val_loss and val_acc
@@ -431,7 +419,7 @@ class ClassifierEngine:
             self.model.eval()
             
             # Variables for the confusion matrix
-            loss, accuracy, indices, labels, predictions, softmaxes, pred_range, true_range, rootfiles= [],[],[],[],[],[],[],[],[]
+            loss, indices, labels, pred_xvert, true_xvert, rootfiles= [],[],[],[],[],[]
             
             # Extract the event data and label from the DataLoader iterator
             for it, eval_data in enumerate(self.data_loaders["test"]):
@@ -440,7 +428,7 @@ class ClassifierEngine:
                 # load data
                 self.data = eval_data['data']
                 self.labels = eval_data['labels']
-                self.range = eval_data['range']
+                self.xvert = eval_data['xvert']
 
                 eval_indices = eval_data['indices']
                 eval_rootfile = eval_data['root_files']
@@ -449,40 +437,32 @@ class ClassifierEngine:
                 result = self.forward(train=False)
 
                 eval_loss += result['loss']
-                eval_acc  += result['accuracy']
                 
                 # Add the local result to the final result
                 indices.extend(eval_indices.numpy())
                 rootfiles.extend(np.array(eval_rootfile))
-                labels.extend(self.labels.numpy())
-                true_range.extend(self.range.numpy())
-                predictions.extend(result['predicted_labels'].detach().cpu().numpy())
-                softmaxes.extend(result["softmax"].detach().cpu().numpy())
-                pred_range.extend(result["pred_range"].detach().cpu().numpy())
+                true_xvert.extend(self.xvert.numpy())
+                pred_xvert.extend(result["pred_xvert"].detach().cpu().numpy())
            
-                print("eval_iteration : " + str(it) + " eval_loss : " + str(result["loss"]) + " eval_accuracy : " + str(result["accuracy"]))
+                print("eval_iteration : " + str(it) + " eval_loss : " + str(result["loss"]))
                 print(f'Iteration time: {process_time() - t}')
             
                 eval_iterations += 1
         
         # convert arrays to torch tensors
-        print("loss : " + str(eval_loss/eval_iterations) + " accuracy : " + str(eval_acc/eval_iterations))
+        print("loss : " + str(eval_loss/eval_iterations))
 
         iterations = np.array([eval_iterations])
         loss = np.array([eval_loss])
-        accuracy = np.array([eval_acc])
 
-        local_eval_metrics_dict = {"eval_iterations":iterations, "eval_loss":loss, "eval_acc":accuracy}
+        local_eval_metrics_dict = {"eval_iterations":iterations, "eval_loss":loss}
         
         indices     = np.array(indices)
         rootfiles    = np.array(rootfiles)
-        labels      = np.array(labels)
-        true_range      = np.array(true_range)
-        predictions = np.array(predictions)
-        softmaxes   = np.array(softmaxes)
-        pred_range   = np.array(pred_range)
+        true_xvert      = np.array(true_xvert)
+        pred_xvert   = np.array(pred_xvert)
         
-        local_eval_results_dict = {"indices":indices, "labels":labels, "true_range":true_range, "predictions":predictions, "softmaxes":softmaxes, "pred_range": pred_range}
+        local_eval_results_dict = {"indices":indices, "true_xvert":true_xvert, "pred_xvert": pred_xvert}
 
         if self.is_distributed:
             # Gather results from all processes
@@ -494,11 +474,8 @@ class ClassifierEngine:
                     local_eval_metrics_dict[name] = np.array(tensor.cpu())
                 
                 indices     = np.array(global_eval_results_dict["indices"].cpu())
-                labels      = np.array(global_eval_results_dict["labels"].cpu())
-                true_range      = np.array(global_eval_results_dict["true_range"].cpu())
-                predictions = np.array(global_eval_results_dict["predictions"].cpu())
-                softmaxes   = np.array(global_eval_results_dict["softmaxes"].cpu())
-                pred_range   = np.array(global_eval_results_dict["pred_range"].cpu())
+                true_xvert      = np.array(global_eval_results_dict["true_xvert"].cpu())
+                pred_xvert   = np.array(global_eval_results_dict["pred_xvert"].cpu())
 
         
         if self.rank == 0:
@@ -510,18 +487,14 @@ class ClassifierEngine:
             np.save(self.dirpath + "indices.npy", indices)#sorted_indices)
             np.save(self.dirpath + "rootfiles.npy", rootfiles)#sorted_indices)
             np.save(self.dirpath + "labels.npy", labels)#[sorted_indices])
-            np.save(self.dirpath + "predictions.npy", predictions)#[sorted_indices])
-            np.save(self.dirpath + "softmax.npy", softmaxes)#[sorted_indices])
-            np.save(self.dirpath + "true_range.npy", true_range)#[sorted_indices])
-            np.save(self.dirpath + "pred_range.npy", pred_range)#[sorted_indices])
+            np.save(self.dirpath + "true_xvert.npy", true_xvert)#[sorted_indices])
+            np.save(self.dirpath + "pred_xvert.npy", pred_xvert)#[sorted_indices])
 
             # Compute overall evaluation metrics
             val_iterations = np.sum(local_eval_metrics_dict["eval_iterations"])
             val_loss = np.sum(local_eval_metrics_dict["eval_loss"])
-            val_acc = np.sum(local_eval_metrics_dict["eval_acc"])
 
-            print("\nAvg eval loss : " + str(val_loss/val_iterations),
-                  "\nAvg eval acc : "  + str(val_acc/val_iterations))
+            print("\nAvg eval loss : " + str(val_loss/val_iterations))
         
     # ========================================================================
     # Saving and loading models

@@ -4,10 +4,7 @@ data:
     h5file: '/fast_scratch_1/fcormier/t2k/ml/skdetsim/oct20_eMuPosPion_0dwallCut_flat_1/combine_combine.hy'
     _target_: watchmal.dataset.cnn.cnn_dataset.CNNDataset
     pmt_positions_file: /fast_scratch/WatChMaL/data/T2K/image_files/skdetsim_imagefile.npy
-    transforms:
-    - horizontal_flip
-    - vertical_flip
-    - front_back_reflection
+    use_times: True
 model:
   _recursive_: false
   _target_: watchmal.model.classifier.Classifier
@@ -15,7 +12,7 @@ model:
   feature_extractor:
     _target_: watchmal.model.resnet.resnet101
     num_input_channels: 2
-    num_output_channels: 3
+    num_output_channels: 1
     stride: 3
     kernelSize: 3
   classification_network:
@@ -39,12 +36,8 @@ tasks:
     data_loaders:
       train:
         split_key: train_idxs
-        batch_size: 1024
+        batch_size: 512
         num_workers: 3
-        transforms:
-        - horizontal_flip
-        - vertical_flip
-        - front_back_reflection
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
       validation:
@@ -55,7 +48,7 @@ tasks:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
     optimizers:
       _target_: torch.optim.Adam
-      lr: 0.001
+      lr: 0.01
       weight_decay: 0
     scheduler:
       _target_: torch.optim.lr_scheduler.ExponentialLR
@@ -69,7 +62,7 @@ tasks:
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
 gpu_list: 
+- 4
 - 5
-- 7
 seed: null
 dump_path: ./outputs/

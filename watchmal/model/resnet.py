@@ -105,7 +105,7 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2, conv_pad_mode=conv_pad_mode)
 
         self.avgpool = nn.AdaptiveAvgPool2d((1,1))
-        self.fc = nn.Linear(512 * block.expansion, num_output_channels)
+        #self.fc = nn.Linear(512 * block.expansion, num_output_channels)
         self.fc_r = nn.Linear(512 * block.expansion, 1)
 
         for m in self.modules():
@@ -153,10 +153,9 @@ class ResNet(nn.Module):
 
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
-        x_c = self.fc(x)
         x_r = self.fc_r(x)
 
-        return x_c, x_r
+        return x_r
 
 
 def resnet18(**kwargs):

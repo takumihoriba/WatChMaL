@@ -57,7 +57,9 @@ class H5CommonDataset(Dataset, ABC):
 #        self.event_ids  = np.array(self.h5_file["event_ids"])
         self.root_files = np.array(self.h5_file["root_files"])
         self.labels = np.array(self.h5_file["labels"])
-        self.range = np.array(self.h5_file["primary_charged_range"])
+        self.xvert = (np.ravel(self.h5_file["positions"][:,:,0]))/1800
+        self.yvert = (np.ravel(self.h5_file["positions"][:,:,1]))/1800
+        self.zvert = (np.ravel(self.h5_file["positions"][:,:,2]))/1800
 
 #        self.positions  = np.array(self.h5_file["positions"])
 #        self.angles     = np.array(self.h5_file["angles"])
@@ -119,7 +121,7 @@ class H5CommonDataset(Dataset, ABC):
 
         data_dict = {
             "labels": self.labels[item].astype(np.int64),
-            "range": self.range[item].astype(np.float32),
+            "xvert": self.xvert[item].astype(np.float32),
             # "energies": self.energies[item],
             # "angles": self.angles[item],
             # "positions": self.positions[item],
