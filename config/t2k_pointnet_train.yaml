@@ -1,13 +1,13 @@
 data:
   split_path: /fast_scratch/fcormier/t2k/ml/wcsim/jan16_emu_fullCylinder_1M_1/train_val_test_nFolds3_fold0.npz
   dataset:
-    h5file: '/fast_scratch/fcormier/t2k/ml/wcsim/jan16_emu_fullCylinder_1M_1/combine_combine.hy'
+    h5file: '/fast_scratch_1/fcormier/t2k/ml/skdetsim/oct20_eMuPosPion_0dwallCut_flat_1/combine_combine.hy'
     _target_: watchmal.dataset.pointnet.pointnet_dataset.PointNetDataset
-    geometry_file: /fast_scratch/WatChMaL/data/T2K/geo_files/geofile.npz
+    geometry_file: /fast_scratch/WatChMaL/data/T2K/geo_files/geofile_skdetsim.npz
 model:
   _recursive_: false
   _target_: watchmal.model.classifier.Classifier
-  num_classes: 2
+  num_classes: 1
   feature_extractor:
     _target_: watchmal.model.pointnet.PointNetFeat
     k: 5
@@ -55,7 +55,7 @@ tasks:
         sampler:
           _target_: watchmal.dataset.samplers.SubsetSequentialSampler
 gpu_list: 
-- 6
-- 7
+- 4
+- 5
 seed: null
 dump_path: /fast_scratch/fcormier/t2k/ml/training/pointnet_jan20_test_epoch20_2/

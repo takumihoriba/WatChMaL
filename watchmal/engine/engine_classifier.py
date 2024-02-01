@@ -175,7 +175,7 @@ class ClassifierEngine:
             #print(self.model(data))
             model_out = self.model(data)
             if train and False:
-                make_dot(model_out, params=dict(list(self.model.named_parameters()))).render("rnn_torchviz_rOnly", format="png")
+                make_dot(model_out, params=dict(list(self.model.named_parameters()))).render("resnet34_torchviz_rOnly", format="png")
                 quit()
             
             pred_xvert = torch.ravel(model_out)

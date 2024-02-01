@@ -28,6 +28,7 @@ class BasicBlock(nn.Module):
 
     def forward(self, x):
         identity = x
+        #print(f'Basic Block: {x.shape}')
 
         out = self.conv1(x)
         out = self.bn1(out)
@@ -142,6 +143,7 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
+        #print(f'ResNet: {x.shape}')
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)

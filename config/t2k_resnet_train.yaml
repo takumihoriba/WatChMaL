@@ -1,7 +1,7 @@
 data:
-  split_path: '/fast_scratch_1/fcormier/t2k/ml/skdetsim/oct20_eMuPosPion_0dwallCut_flat_1/train_val_test_nFolds7_fold3.npz' 
+  split_path: '/fast_scratch_2/fcormier/t2k/jan28_electronsOnly_5M/train_val_test_nFolds7_fold3.npz' 
   dataset:
-    h5file: '/fast_scratch_1/fcormier/t2k/ml/skdetsim/oct20_eMuPosPion_0dwallCut_flat_1/combine_combine.hy'
+    h5file: '/fast_scratch_2/fcormier/t2k/jan28_electronsOnly_5M/digi_combine.hy'
     _target_: watchmal.dataset.cnn.cnn_dataset.CNNDataset
     pmt_positions_file: /fast_scratch/WatChMaL/data/T2K/image_files/skdetsim_imagefile.npy
     use_times: True
@@ -22,12 +22,12 @@ engine:
   restore_path: 0
 tasks:
   train:
-    epochs: 20
+    epochs: 50
     report_interval: 100
     val_interval: 100
     num_val_batches: 32
     checkpointing: false
-    early_stopping_patience: 3
+    early_stopping_patience: 10
     restore_best_state: false
     label_set:
     - 0
@@ -36,13 +36,13 @@ tasks:
     data_loaders:
       train:
         split_key: train_idxs
-        batch_size: 512
+        batch_size: 128
         num_workers: 3
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
       validation:
         split_key: val_idxs
-        batch_size: 1024
+        batch_size: 256
         num_workers: 4
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
@@ -57,7 +57,7 @@ tasks:
     data_loaders:
       test:
         split_key: test_idxs
-        batch_size: 1024
+        batch_size: 256
         num_workers: 4
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
