@@ -20,6 +20,7 @@ model:
     _target_: watchmal.model.classifier.PassThrough
 engine:
   _target_: watchmal.engine.engine_classifier.ClassifierEngine
+  regression: False
   restore_path: 0
 tasks:
   train:
@@ -63,7 +64,7 @@ tasks:
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
 gpu_list:
-- 6 
-- 7
+- 2 
+- 3
 seed: null
 dump_path: ./outputs/

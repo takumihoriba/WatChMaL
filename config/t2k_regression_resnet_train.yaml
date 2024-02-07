@@ -17,10 +17,11 @@ model:
     _target_: watchmal.model.classifier.PassThrough
 engine:
   _target_: watchmal.engine.engine_classifier.ClassifierEngine
+  regression: False 
   restore_path: 0
 tasks:
   train:
-    epochs: 2
+    epochs: 0
     report_interval: 100
     val_interval: 100
     num_val_batches: 32
@@ -30,15 +31,15 @@ tasks:
     data_loaders:
       train:
         split_key: train_idxs
-        batch_size: 32
-        num_workers: 3
+        batch_size: 64
+        num_workers: 2
         transforms:
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
       validation:
         split_key: val_idxs
-        batch_size: 256
-        num_workers: 4
+        batch_size: 64
+        num_workers: 2
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
     optimizers:
@@ -52,12 +53,12 @@ tasks:
     data_loaders:
       test:
         split_key: test_idxs
-        batch_size: 256
-        num_workers: 4
+        batch_size: 64
+        num_workers: 2
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
 gpu_list: 
-- 0
-- 1
+- 2
+- 3
 seed: null
 dump_path: ./outputs/
