@@ -32,7 +32,7 @@ class CNNDataset(H5Dataset):
     event-display-like format.
     """
 
-    def __init__(self, h5file, pmt_positions_file, use_times=True, use_charges=True, use_positions=False, transforms=None, one_indexed=True, channel_scaling=None, geometry_file=None):
+    def __init__(self, h5file, pmt_positions_file, use_times=True, use_charges=True, use_positions=False, transforms=None, one_indexed=True, channel_scaling=None, geometry_file=None, dead_pmt_rate=None):
         """
         Constructs a dataset for CNN data. Event hit data is read in from the HDF5 file and the PMT charge and/or time
         data is formatted into an event-display-like image for input to a CNN. Each pixel of the image corresponds to
@@ -56,7 +56,7 @@ class CNNDataset(H5Dataset):
             Whether the PMT IDs in the H5 file are indexed starting at 1 (like SK tube numbers) or 0 (like WCSim PMT
             indexes). By default, zero-indexing is assumed.
         """
-        super().__init__(h5file)
+        super().__init__(h5file, dead_pmt_rate)
         
         self.pmt_positions = np.load(pmt_positions_file)#['pmt_image_positions']
         self.use_times = use_times
@@ -145,6 +145,20 @@ class CNNDataset(H5Dataset):
 
         data = np.zeros(self.data_size, dtype=np.float32)
 
+        # dead_pmt_rate = 0.8
+        # hit_charges_copy = hit_charges
+
+        # print("before:", hit_charges)
+
+        # if dead_pmt_rate is not None and dead_pmt_rate > 0:
+        #     print("killing PMTs with prob: ", dead_pmt_rate)
+        #     zero_mask = np.random.rand(*hit_charges.shape) < dead_pmt_rate
+        #     hit_charges_copy = np.zeros(*hit_charges.shape, dtype=np.float32)
+        #     hit_charges_copy = np.where(zero_mask, 0, hit_charges)
+
+        # print("before:", hit_charges)
+        # print("after: ", hit_charges_copy)
+
         if self.use_times and self.use_charges:
             data[0, hit_rows, hit_cols] = hit_times
             data[1, hit_rows, hit_cols] = hit_charges
@@ -152,6 +166,7 @@ class CNNDataset(H5Dataset):
                 data[2, hit_rows, hit_cols] = hit_positions[:,0]
                 data[3, hit_rows, hit_cols] = hit_positions[:,1]
                 data[4, hit_rows, hit_cols] = hit_positions[:,2]
+            # print("after: ", data[1, hit_rows, hit_cols])
         elif self.use_times:
             data[0, hit_rows, hit_cols] = hit_times
             if self.use_positions:
@@ -170,6 +185,8 @@ class CNNDataset(H5Dataset):
     def __getitem__(self, item):
 
         data_dict = super().__getitem__(item)
+        # print("data dict start", data_dict)
+        # print("data dict end")
         if self.use_positions:
             self.hit_positions = self.geo_positions[self.event_hit_pmts, :]
             hit_data = {"charge": self.event_hit_charges, "time": self.event_hit_times, "position": self.hit_positions}
@@ -182,13 +199,31 @@ class CNNDataset(H5Dataset):
             processed_data = from_numpy(self.process_data(self.event_hit_pmts, hit_data["time"], hit_data["charge"], hit_positions=hit_data["position"]))
         else:
             processed_data = from_numpy(self.process_data(self.event_hit_pmts, hit_data["time"], hit_data["charge"]))
-        #self.save_fig(processed_data[0],False)
-        #processed_data, displacement = self.rotate_cylinder(Tensor.numpy(processed_data))
-        #self.save_fig(processed_data[0],True, displacement = displacement)
+        # self.save_fig(processed_data[0],False)
+        # processed_data, displacement = self.rotate_cylinder(Tensor.numpy(processed_data))
+        # self.save_fig(processed_data[0],True, displacement = displacement)
         self.counter+=1
         data_dict["data"] = processed_data
-        if False:
-            du.save_fig(processed_data[1],False, counter = self.counter)
+        if 1:
+            # charge figs
+            # du.save_fig(processed_data[1],False, counter = self.counter)
+
+            # time figs
+            # du.save_fig(processed_data[0], False, counter= self.counter)
+
+            # print("1. charge:", processed_data[1])
+            # print("charge size():", processed_data[1].size())
+            # print("# 0. in charge:", torch.sum(processed_data[1]== 0.).item())
+            # print("# 0  in charge:", torch.sum(processed_data[1]== 0).item())
+            # # both seem to be same
+
+            # print("2. time:", processed_data[0])
+            # print("time size():", processed_data[0].size())
+            # print("# 0. in time:", torch.sum(processed_data[0]== 0.).item())
+            # print("# 0  in time:", torch.sum(processed_data[0]== 0).item())
+            if self.counter <= 45:
+                du.save_time_distn(processed_data[1], processed_data[0], False, counter=self.counter)
+
         for t in self.transforms:
             #apply each transformation only half the time
             #Probably should be implemented in data_utils?

@@ -170,8 +170,10 @@ class H5Dataset(H5CommonDataset, ABC):
     hit_charge  (n_hits,)  float32    Charge of the digitized hit
     =============================================================
     """
-    def __init__(self, h5_path):
+    def __init__(self, h5_path, dead_pmt_rate=None):
         H5CommonDataset.__init__(self, h5_path)
+        self.dead_pmt_rate = dead_pmt_rate
+
         
     def load_hits(self):
         """Creates a memmap for the digitized hit charge data."""
@@ -179,7 +181,7 @@ class H5Dataset(H5CommonDataset, ABC):
         self.hit_charge = np.memmap(self.h5_path, mode="r", shape=self.hdf5_hit_charge.shape,
                                     offset=self.hdf5_hit_charge.id.get_offset(),
                                     dtype=self.hdf5_hit_charge.dtype)
-        
+    
     def __getitem__(self, item):
         data_dict = super().__getitem__(item)
 
@@ -187,10 +189,25 @@ class H5Dataset(H5CommonDataset, ABC):
         stop = self.event_hits_index[item + 1]
 
         self.event_hit_pmts = self.hit_pmt[start:stop]
-        self.event_hit_charges = self.hit_charge[start:stop]
+        # self.event_hit_charges = self.hit_charge[start:stop]
+        # `rand` generates matrix of size specificed, each element of which follows Unif(0, 1). 
+        if self.dead_pmt_rate is not None: # no need to check probability less than 0 or bigger than 0 here.  
+            self.event_hit_charges = np.where(np.random.rand(*self.hit_charge[start:stop].shape) < self.dead_pmt_rate, 0, self.hit_charge[start:stop])
+        else:
+            self.event_hit_charges = self.hit_charge[start:stop]
         self.event_hit_times = self.time[start:stop]
 
+        # for validation purpose
+        # print("# non-zero elements comparison (L0-norm) with dead PMT probability: ", 0 if self.dead_pmt_rate is None else self.dead_pmt_rate)
+        # print("h5 charge L0-norm (before): ", np.sum(self.hit_charge[start:stop] != 0))
+        # print("h5 charge L0-norm (after):  ", np.sum(self.event_hit_charges != 0))
+        # print("h5 charge (before):", self.hit_charge[start:stop])
+        # print("h5 charge (after): ", self.event_hit_charges)
+
         return data_dict
+
+        
+    
 
 
 class H5TrueDataset(H5CommonDataset, ABC):
