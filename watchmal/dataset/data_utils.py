@@ -162,11 +162,11 @@ def save_fig(data,isPost, displacement=0, counter=0):
     cbar = plt.colorbar()
     print("2")
     cbar.ax.get_yaxis().labelpad = 15
-    # cbar.ax.set_ylabel("PMT Charge", rotation=270)
-    cbar.ax.set_ylabel("PMT Time", rotation=270)
+    cbar.ax.set_ylabel("PMT Charge", rotation=270)
+    # cbar.ax.set_ylabel("PMT Time", rotation=270)
     plt.xlabel('X pixels')
     plt.ylabel('Y pixels')
-    path_fig = '/data/thoriba/t2k/plots/time_plot/'
+    path_fig = '/data/thoriba/t2k/plots/charge_plot/dead_80/'
     os.makedirs(path_fig, exist_ok=True)
     if isPost:
         plt.savefig(path_fig+str(counter)+'_post_rot_dc_img_dis'+str(displacement)+'.png')
@@ -197,7 +197,7 @@ def save_time_distn(charges, times, isPost, displacement=0, counter=0):
     plt.text(0.05, 0.9, f'Bin Size (specified) = {bins}\nBin Width (calculated) = {bin_width}', transform=plt.gca().transAxes, fontsize=10, verticalalignment='top')
 
 
-    path_fig = '/data/thoriba/t2k/plots/time_plot/time_hist_bin100_3/'
+    path_fig = '/data/thoriba/t2k/plots/time_plot/time_hist_bin100_5_3percent/'
     os.makedirs(path_fig, exist_ok=True)
 
     if isPost:

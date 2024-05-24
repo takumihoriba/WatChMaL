@@ -170,9 +170,10 @@ class H5Dataset(H5CommonDataset, ABC):
     hit_charge  (n_hits,)  float32    Charge of the digitized hit
     =============================================================
     """
-    def __init__(self, h5_path, dead_pmt_rate=None):
+    def __init__(self, h5_path, dead_pmt_rate=None, dead_pmt_seed=None):
         H5CommonDataset.__init__(self, h5_path)
         self.dead_pmt_rate = dead_pmt_rate
+        self.dead_pmt_seed = dead_pmt_seed
 
         
     def load_hits(self):
@@ -190,25 +191,42 @@ class H5Dataset(H5CommonDataset, ABC):
 
         self.event_hit_pmts = self.hit_pmt[start:stop]
         # self.event_hit_charges = self.hit_charge[start:stop]
+
+        # print("stop - start:", stop-start)
+        # diff.
+
         # `rand` generates matrix of size specificed, each element of which follows Unif(0, 1). 
         if self.dead_pmt_rate is not None: # no need to check probability less than 0 or bigger than 0 here.  
-            self.event_hit_charges = np.where(np.random.rand(*self.hit_charge[start:stop].shape) < self.dead_pmt_rate, 0, self.hit_charge[start:stop])
+            # set charges and times to zero
+            if self.dead_pmt_seed is None:
+                self.dead_pmt_seed = 5
+            np.random.seed(self.dead_pmt_seed)
+            mask = np.random.rand(*self.hit_charge[start:stop].shape) < self.dead_pmt_rate
+            # print("mask.shape", mask.shape)
+            # print("mast content", mask)
+            # print("# true in mask", np.sum(mask))
+            self.event_hit_charges = np.where(mask, 0., self.hit_charge[start:stop])
+            self.event_hit_times   = np.where(mask, 0., self.time[start:stop])
         else:
             self.event_hit_charges = self.hit_charge[start:stop]
-        self.event_hit_times = self.time[start:stop]
+            self.event_hit_times = self.time[start:stop]
 
+        # print(f"Dead PMT Rate: {self.dead_pmt_rate} | Dead PMT Seed Value: {self.dead_pmt_seed}")
         # for validation purpose
         # print("# non-zero elements comparison (L0-norm) with dead PMT probability: ", 0 if self.dead_pmt_rate is None else self.dead_pmt_rate)
-        # print("h5 charge L0-norm (before): ", np.sum(self.hit_charge[start:stop] != 0))
-        # print("h5 charge L0-norm (after):  ", np.sum(self.event_hit_charges != 0))
-        # print("h5 charge (before):", self.hit_charge[start:stop])
+        # print("h5 charge L0-norm (before): ", np.sum(self.hit_charge[start:stop] != 0.))
+        # print("h5 charge L0-norm (after):  ", np.sum(self.event_hit_charges != 0.))
+        # print("h5 charge L0-norm (difference):  ",  np.sum(self.hit_charge[start:stop] != 0.) - np.sum(self.event_hit_charges != 0.))
+        # observed_rate = (np.sum(self.hit_charge[start:stop] != 0.) - np.sum(self.event_hit_charges != 0.)) / self.hit_charge[start:stop].size
+        # print(f"Specified dead rate: \033[34m{self.dead_pmt_rate * 100:.2f}%.\033[0m \033[32m{observed_rate*100:.2f}%\033[0m of PMTs have been turned off.")
+
+        # print("h5 charge: all elements - L(before):", self.hit_charge[start:stop])
         # print("h5 charge (after): ", self.event_hit_charges)
 
+        '''
+            while each event size (:= stop - start) is different, having the same value ensures we always have same mask array for any size.
+        '''
         return data_dict
-
-        
-    
-
 
 class H5TrueDataset(H5CommonDataset, ABC):
     """

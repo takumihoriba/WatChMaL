@@ -6,7 +6,8 @@ data:
     pmt_positions_file: /data/thoriba/t2k/imagefile/skdetsim_imagefile.npy
     channel_scaling:
       time: [950, 10]
-    dead_pmt_rate: 
+    dead_pmt_rate: .05
+    dead_pmt_seed: null
 model:
   _target_: watchmal.model.resnet.resnet34
   num_input_channels: 2
@@ -33,7 +34,7 @@ tasks:
         batch_size: 300
         num_workers: 1
         sampler:
-          _target_: torch.utils.data.sampler.SubsetRandomSampler
+          _target_: torch.utils.data.sampler.SequentialSampler
 gpu_list: 
 - 1
 seed: null

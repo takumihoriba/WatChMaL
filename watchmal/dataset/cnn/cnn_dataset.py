@@ -32,7 +32,7 @@ class CNNDataset(H5Dataset):
     event-display-like format.
     """
 
-    def __init__(self, h5file, pmt_positions_file, use_times=True, use_charges=True, use_positions=False, transforms=None, one_indexed=True, channel_scaling=None, geometry_file=None, dead_pmt_rate=None):
+    def __init__(self, h5file, pmt_positions_file, use_times=True, use_charges=True, use_positions=False, transforms=None, one_indexed=True, channel_scaling=None, geometry_file=None, dead_pmt_rate=None, dead_pmt_seed=None):
         """
         Constructs a dataset for CNN data. Event hit data is read in from the HDF5 file and the PMT charge and/or time
         data is formatted into an event-display-like image for input to a CNN. Each pixel of the image corresponds to
@@ -56,7 +56,7 @@ class CNNDataset(H5Dataset):
             Whether the PMT IDs in the H5 file are indexed starting at 1 (like SK tube numbers) or 0 (like WCSim PMT
             indexes). By default, zero-indexing is assumed.
         """
-        super().__init__(h5file, dead_pmt_rate)
+        super().__init__(h5file, dead_pmt_rate, dead_pmt_seed)
         
         self.pmt_positions = np.load(pmt_positions_file)#['pmt_image_positions']
         self.use_times = use_times
@@ -194,19 +194,24 @@ class CNNDataset(H5Dataset):
             hit_data = {"charge": self.event_hit_charges, "time": self.event_hit_times}
         # apply scaling to channels
         for c, (offset, scale) in self.scaling.items():
-            hit_data[c] = (hit_data[c] - offset)/scale
+            if c == 'time':
+                hit_data[c] = np.maximum((hit_data[c] - offset)/scale, 0.)
+            else:
+                hit_data[c] = (hit_data[c] - offset)/scale
         if self.use_positions:
             processed_data = from_numpy(self.process_data(self.event_hit_pmts, hit_data["time"], hit_data["charge"], hit_positions=hit_data["position"]))
         else:
             processed_data = from_numpy(self.process_data(self.event_hit_pmts, hit_data["time"], hit_data["charge"]))
         # self.save_fig(processed_data[0],False)
         # processed_data, displacement = self.rotate_cylinder(Tensor.numpy(processed_data))
-        # self.save_fig(processed_data[0],True, displacement = displacement)
+        
+        
         self.counter+=1
         data_dict["data"] = processed_data
         if 1:
-            # charge figs
-            # du.save_fig(processed_data[1],False, counter = self.counter)
+            # charge figs (1st) for first 20 events
+            if self.counter <= 20:
+                du.save_fig(processed_data[1], False, counter = self.counter)
 
             # time figs
             # du.save_fig(processed_data[0], False, counter= self.counter)
@@ -221,8 +226,9 @@ class CNNDataset(H5Dataset):
             # print("time size():", processed_data[0].size())
             # print("# 0. in time:", torch.sum(processed_data[0]== 0.).item())
             # print("# 0  in time:", torch.sum(processed_data[0]== 0).item())
-            if self.counter <= 45:
-                du.save_time_distn(processed_data[1], processed_data[0], False, counter=self.counter)
+
+            # if self.counter <= 45:
+            #     du.save_time_distn(processed_data[1], processed_data[0], False, counter=self.counter)
 
         for t in self.transforms:
             #apply each transformation only half the time
