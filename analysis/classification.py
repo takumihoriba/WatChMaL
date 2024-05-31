@@ -121,6 +121,7 @@ def plot_rocs(runs, signal_labels, background_labels, selection=None, ax=None, f
     if legend:
         ax.legend(loc=legend)
     return fig, ax
+    
 
 
 def plot_efficiency_profile(runs, binning, selection=None, select_labels=None, ax=None, fig_size=None, x_label="",

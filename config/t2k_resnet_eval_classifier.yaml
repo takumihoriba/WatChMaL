@@ -34,8 +34,8 @@ tasks:
         batch_size: 300
         num_workers: 1
         sampler:
-          _target_: torch.utils.data.sampler.SequentialSampler
+          _target_: torch.utils.data.sampler.SubsetRandomSampler
 gpu_list: 
-- 1
+- 5
 seed: null
 dump_path: ./outputs/

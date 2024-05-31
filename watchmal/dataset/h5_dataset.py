@@ -196,7 +196,7 @@ class H5Dataset(H5CommonDataset, ABC):
         # diff.
 
         # `rand` generates matrix of size specificed, each element of which follows Unif(0, 1). 
-        if self.dead_pmt_rate is not None: # no need to check probability less than 0 or bigger than 0 here.  
+        if self.dead_pmt_rate is not None and self.dead_pmt_rate > 0 and self.dead_pmt_rate <= 1: # no need to check probability less than 0 or bigger than 0 here.  
             # set charges and times to zero
             if self.dead_pmt_seed is None:
                 self.dead_pmt_seed = 5
