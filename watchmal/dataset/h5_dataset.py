@@ -195,8 +195,11 @@ class H5Dataset(H5CommonDataset, ABC):
         # print("stop - start:", stop-start)
         # diff.
 
+        # print("dead PMT rate: ", self.dead_pmt_rate)
+
         # `rand` generates matrix of size specificed, each element of which follows Unif(0, 1). 
         if self.dead_pmt_rate is not None and self.dead_pmt_rate > 0 and self.dead_pmt_rate <= 1: # no need to check probability less than 0 or bigger than 0 here.  
+            # print("killing PMTs with rate= ", self.dead_pmt_rate)
             # set charges and times to zero
             if self.dead_pmt_seed is None:
                 self.dead_pmt_seed = 5
@@ -208,6 +211,7 @@ class H5Dataset(H5CommonDataset, ABC):
             self.event_hit_charges = np.where(mask, 0., self.hit_charge[start:stop])
             self.event_hit_times   = np.where(mask, 0., self.time[start:stop])
         else:
+            # print("NOT killing PMTs with rate= ", self.dead_pmt_rate)
             self.event_hit_charges = self.hit_charge[start:stop]
             self.event_hit_times = self.time[start:stop]
 

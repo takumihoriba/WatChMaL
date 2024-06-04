@@ -95,6 +95,7 @@ def plot_rocs(runs, signal_labels, background_labels, selection=None, ax=None, f
         selected_discriminator = r.discriminator(signal_labels, background_labels)[run_selection]
         fpr, tpr, _ = metrics.roc_curve(selected_signal, selected_discriminator)
         auc = metrics.auc(fpr, tpr)
+        # print(auc)
         args = {**plot_args, **r.plot_args}
         args['label'] = f"{args['label']} (AUC={auc:.4f})"
         if mode == 'rejection':
@@ -121,8 +122,16 @@ def plot_rocs(runs, signal_labels, background_labels, selection=None, ax=None, f
     if legend:
         ax.legend(loc=legend)
     return fig, ax
-    
 
+def compute_AUC(runs, signal_labels, background_labels, selection=None):
+    auc = 0
+    for r in runs:
+        run_selection = r.selection if selection is None else selection
+        selected_signal = np.isin(r.true_labels, signal_labels)[run_selection]
+        selected_discriminator = r.discriminator(signal_labels, background_labels)[run_selection]
+        fpr, tpr, _ = metrics.roc_curve(selected_signal, selected_discriminator)
+        auc = metrics.auc(fpr, tpr)
+    return auc
 
 def plot_efficiency_profile(runs, binning, selection=None, select_labels=None, ax=None, fig_size=None, x_label="",
                             y_label="", legend='upper left', y_lim=None, label=None, **plot_args):

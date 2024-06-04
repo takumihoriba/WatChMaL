@@ -15,8 +15,8 @@ import WatChMaL.watchmal.dataset.data_utils as du
 
 class PointNetT2KDataset(H5Dataset):
 
-    def __init__(self, h5file, is_distributed=False, use_positions=True, use_times=True, use_orientations=False, n_points=2500, transforms=None):
-        super().__init__(h5file, is_distributed)
+    def __init__(self, h5file, is_distributed=False, use_positions=True, use_times=True, use_orientations=False, n_points=2500, transforms=None, dead_pmt_rate=None, dead_pmt_seed=None):
+        super().__init__(h5file, is_distributed, dead_pmt_rate=dead_pmt_rate, dead_pmt_seed=dead_pmt_seed)
         #geo_file = np.load(geometry_file, 'r')
         #self.geo_positions = geo_file["position"].astype(np.float32)
         #elf.geo_orientations = geo_file["orientation"].astype(np.float32)

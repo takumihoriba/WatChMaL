@@ -56,7 +56,7 @@ class CNNDataset(H5Dataset):
             Whether the PMT IDs in the H5 file are indexed starting at 1 (like SK tube numbers) or 0 (like WCSim PMT
             indexes). By default, zero-indexing is assumed.
         """
-        super().__init__(h5file, dead_pmt_rate, dead_pmt_seed)
+        super().__init__(h5file, dead_pmt_rate=dead_pmt_rate, dead_pmt_seed=dead_pmt_seed)
         
         self.pmt_positions = np.load(pmt_positions_file)#['pmt_image_positions']
         self.use_times = use_times
@@ -208,10 +208,10 @@ class CNNDataset(H5Dataset):
         
         self.counter+=1
         data_dict["data"] = processed_data
-        if 1:
+        # if 1:
             # charge figs (1st) for first 20 events
-            if self.counter <= 20:
-                du.save_fig(processed_data[1], False, counter = self.counter)
+            # if self.counter <= 20:
+            #     du.save_fig(processed_data[1], False, counter = self.counter)
 
             # time figs
             # du.save_fig(processed_data[0], False, counter= self.counter)
