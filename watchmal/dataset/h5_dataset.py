@@ -170,10 +170,8 @@ class H5Dataset(H5CommonDataset, ABC):
     hit_charge  (n_hits,)  float32    Charge of the digitized hit
     =============================================================
     """
-    def __init__(self, h5_path, dead_pmt_rate=None, dead_pmt_seed=None):
+    def __init__(self, h5_path):
         H5CommonDataset.__init__(self, h5_path)
-        self.dead_pmt_rate = dead_pmt_rate
-        self.dead_pmt_seed = dead_pmt_seed
 
         
     def load_hits(self):
@@ -190,30 +188,28 @@ class H5Dataset(H5CommonDataset, ABC):
         stop = self.event_hits_index[item + 1]
 
         self.event_hit_pmts = self.hit_pmt[start:stop]
-        # self.event_hit_charges = self.hit_charge[start:stop]
+        self.event_hit_charges = self.hit_charge[start:stop]
+        self.event_hit_times = self.time[start:stop]
 
-        # print("stop - start:", stop-start)
-        # diff.
-
-        # print("dead PMT rate: ", self.dead_pmt_rate)
+        # print('dead pmt rate', self.dead_pmt_rate)
 
         # `rand` generates matrix of size specificed, each element of which follows Unif(0, 1). 
-        if self.dead_pmt_rate is not None and self.dead_pmt_rate > 0 and self.dead_pmt_rate <= 1: # no need to check probability less than 0 or bigger than 0 here.  
-            # print("killing PMTs with rate= ", self.dead_pmt_rate)
-            # set charges and times to zero
-            if self.dead_pmt_seed is None:
-                self.dead_pmt_seed = 5
-            np.random.seed(self.dead_pmt_seed)
-            mask = np.random.rand(*self.hit_charge[start:stop].shape) < self.dead_pmt_rate
-            # print("mask.shape", mask.shape)
-            # print("mast content", mask)
-            # print("# true in mask", np.sum(mask))
-            self.event_hit_charges = np.where(mask, 0., self.hit_charge[start:stop])
-            self.event_hit_times   = np.where(mask, 0., self.time[start:stop])
-        else:
-            # print("NOT killing PMTs with rate= ", self.dead_pmt_rate)
-            self.event_hit_charges = self.hit_charge[start:stop]
-            self.event_hit_times = self.time[start:stop]
+        # if self.dead_pmt_rate is not None: # and self.dead_pmt_rate > 0 and self.dead_pmt_rate <= 1: # no need to check probability less than 0 or bigger than 0 here.  
+        #     # print("killing PMTs with rate= ", self.dead_pmt_rate)
+        #     # set charges and times to zero
+        #     if self.dead_pmt_seed is None:
+        #         self.dead_pmt_seed = 5
+        #     np.random.seed(self.dead_pmt_seed)
+        #     mask = np.random.rand(*self.hit_charge[start:stop].shape) < self.dead_pmt_rate
+        #     # print("mask.shape", mask.shape)
+        #     # print("mast content", mask)
+        #     # print("# true in mask", np.sum(mask))
+        #     self.event_hit_charges = np.where(mask, 0., self.hit_charge[start:stop])
+        #     self.event_hit_times   = np.where(mask, 0., self.time[start:stop])
+        # else:
+        #     # print("NOT killing PMTs with rate= ", self.dead_pmt_rate)
+        #     self.event_hit_charges = self.hit_charge[start:stop]
+        #     self.event_hit_times = self.time[start:stop]
 
         # print(f"Dead PMT Rate: {self.dead_pmt_rate} | Dead PMT Seed Value: {self.dead_pmt_seed}")
         # for validation purpose

@@ -32,7 +32,7 @@ class CNNDataset(H5Dataset):
     event-display-like format.
     """
 
-    def __init__(self, h5file, pmt_positions_file, use_times=True, use_charges=True, use_positions=False, transforms=None, one_indexed=True, channel_scaling=None, geometry_file=None, dead_pmt_rate=None, dead_pmt_seed=None):
+    def __init__(self, h5file, pmt_positions_file, use_times=True, use_charges=True, use_positions=False, transforms=None, one_indexed=True, channel_scaling=None, geometry_file=None):
         """
         Constructs a dataset for CNN data. Event hit data is read in from the HDF5 file and the PMT charge and/or time
         data is formatted into an event-display-like image for input to a CNN. Each pixel of the image corresponds to
@@ -56,7 +56,7 @@ class CNNDataset(H5Dataset):
             Whether the PMT IDs in the H5 file are indexed starting at 1 (like SK tube numbers) or 0 (like WCSim PMT
             indexes). By default, zero-indexing is assumed.
         """
-        super().__init__(h5file, dead_pmt_rate=dead_pmt_rate, dead_pmt_seed=dead_pmt_seed)
+        super().__init__(h5file)
         
         self.pmt_positions = np.load(pmt_positions_file)#['pmt_image_positions']
         self.use_times = use_times
@@ -194,10 +194,7 @@ class CNNDataset(H5Dataset):
             hit_data = {"charge": self.event_hit_charges, "time": self.event_hit_times}
         # apply scaling to channels
         for c, (offset, scale) in self.scaling.items():
-            if c == 'time':
-                hit_data[c] = np.maximum((hit_data[c] - offset)/scale, 0.)
-            else:
-                hit_data[c] = (hit_data[c] - offset)/scale
+            hit_data[c] = (hit_data[c] - offset)/scale
         if self.use_positions:
             processed_data = from_numpy(self.process_data(self.event_hit_pmts, hit_data["time"], hit_data["charge"], hit_positions=hit_data["position"]))
         else:
@@ -239,7 +236,6 @@ class CNNDataset(H5Dataset):
             du.save_fig(data_dict["data"][1],True, counter = self.counter)
         processed_data = self.double_cover(data_dict["data"])
         #processed_data = du.apply_random_transformations(self.transforms, processed_data, counter = self.counter)
-
 
         return data_dict
 
@@ -507,4 +503,265 @@ class CNNDataset(H5Dataset):
         padded_data = torch.cat(concat_order, dim=1)
 
         return padded_data
+
+class CNNDatasetDeadPMT(CNNDataset):
+    """
+    This class does everything done by its parent 'CNNDataset'. In addition, it sets a fixed set of PMTs as 'dead' (having 0 charge and time).
+    It has three additional attributes: dead_pmt_rate, dead_pmt_seed, dead_pmts.
+    """
+
+    def __init__(self, h5file, pmt_positions_file, use_times=True, use_charges=True, use_positions=False, transforms=None, one_indexed=True, channel_scaling=None, geometry_file=None, dead_pmt_rate=None, dead_pmt_seed=None):
+        """
+        Constructs a dataset for CNN data. Event hit data is read in from the HDF5 file and the PMT charge and/or time
+        data is formatted into an event-display-like image for input to a CNN. Each pixel of the image corresponds to
+        one PMT and the channels correspond to charge and/or time at each PMT. The PMTs are placed in the image
+        according to a mapping provided by the numpy array in the `pmt_positions_file`.
+
+        Parameters
+        ----------
+        h5file: string
+            Location of the HDF5 file containing the event data
+        pmt_positions_file: string
+            Location of an npz file containing the mapping from PMT IDs to CNN image pixel locations
+        use_times: bool
+            Whether to use PMT hit times as one of the initial CNN image channels. True by default.
+        use_charges: bool
+            Whether to use PMT hit charges as one of the initial CNN image channels. True by default.
+        transforms
+            List of random transforms to apply to data before passing to CNN for data augmentation. Currently unused for
+            this dataset.
+        one_indexed: bool
+            Whether the PMT IDs in the H5 file are indexed starting at 1 (like SK tube numbers) or 0 (like WCSim PMT
+            indexes). By default, zero-indexing is assumed.
+        dead_pmt_rate: float
+            A proportion of dead PMTs to create.
+        dead_pmt_seed: int
+            Seed value for randomness involving selection of dead PMTs
+        """
+        super().__init__(h5file, pmt_positions_file, use_times=use_times, use_charges=use_charges, use_positions=use_positions, transforms=transforms, one_indexed=one_indexed, channel_scaling=channel_scaling, geometry_file=geometry_file)
+        self.dead_pmt_rate = dead_pmt_rate
+        self.dead_pmt_seed = dead_pmt_seed if dead_pmt_seed is not None else 42
+        
+        self.set_dead_pmts()
+    
+    def set_dead_pmts(self):
+        """
+        Sets array of dead PMTs using dead_pmt_rate and dead_pmt_seed if dead_pmt_rate is not None and is in (0, 1]
+        dead_pmts is an array of dead PMT IDs.
+        """
+        if self.dead_pmt_rate is not None and self.dead_pmt_rate > 0 and self.dead_pmt_rate <= 1:
+            num_dead_pmts = min(len(self.pmt_positions), int(len(self.pmt_positions) * self.dead_pmt_rate))
+            np.random.seed(self.dead_pmt_seed)
+            self.dead_pmts = np.random.choice(len(self.pmt_positions), num_dead_pmts, replace=False)
+            print(f'Dead PMTs were set with rate={self.dead_pmt_rate} with seed={self.dead_pmt_seed}. Here is dead PMT IDs')
+            print(self.dead_pmts)
+        else:
+            self.dead_pmts = np.array([], dtype=int)
+            print('No dead PMTs were set. If you intend to set dead PMTs, please make sure dedd PMT rate is in (0,1]')
+
+    def process_data(self, hit_pmts, hit_times, hit_charges, hit_positions=None, double_cover = None, transforms = None):
+        """
+        Returns event data from dataset associated with a specific index
+
+        Parameters
+        ----------
+        hit_pmts: array_like of int
+            Array of hit PMT IDs
+        hit_times: array_like of float
+            Array of PMT hit times
+        hit_charges: array_like of float
+            Array of PMT hit charges
+        
+        Returns
+        -------
+        data: ndarray
+            Array in image-like format (channels, rows, columns) for input to CNN network.
+        """
+        if self.one_indexed:
+            hit_pmts = hit_pmts-1  # SK cable numbers start at 1
+        
+        dead_pmts = self.dead_pmts # int Array of dead PMT IDs
+
+        hit_rows = self.pmt_positions[hit_pmts, 0]
+        hit_cols = self.pmt_positions[hit_pmts, 1]
+
+        hit_rows_d = self.pmt_positions[dead_pmts, 0]
+        hit_cols_d = self.pmt_positions[dead_pmts, 1]
+
+        data = np.zeros(self.data_size, dtype=np.float32)
+
+        if self.use_times and self.use_charges:
+            # print('----------------------------------')
+            # print('len dead PMTs', len(dead_pmts))
+            # print('len(hit_pmts )', len(hit_pmts))
+            # print('len(hit_chrgs)', len(hit_charges))
+            # print('len(hit_times)', len(hit_times))
+            
+            data[0, hit_rows, hit_cols] = hit_times
+            data[1, hit_rows, hit_cols] = hit_charges
+
+            # print('non-zero times in data (before)', np.count_nonzero(data[0]))
+            # print('non-zero chrgs in data (before)', np.count_nonzero(data[1]))
+
+            # kill
+            data[0, hit_rows_d, hit_cols_d] = .0
+            data[1, hit_rows_d, hit_cols_d] = .0
+
+            # print('non-zero times in data (after) ', np.count_nonzero(data[0]))
+            # print('non-zero chrgs in data (after) ', np.count_nonzero(data[1]))
+
+            if self.use_positions:
+                data[2, hit_rows, hit_cols] = hit_positions[:,0]
+                data[3, hit_rows, hit_cols] = hit_positions[:,1]
+                data[4, hit_rows, hit_cols] = hit_positions[:,2]
+
+                data[2, hit_rows_d, hit_cols_d] = .0
+                data[3, hit_rows_d, hit_cols_d] = .0
+                data[4, hit_rows_d, hit_cols_d] = .0
+
+        elif self.use_times:
+            data[0, hit_rows, hit_cols] = hit_times
+            # kill
+            data[0, hit_rows_d, hit_cols_d] = .0
+
+            if self.use_positions:
+                data[1, hit_rows, hit_cols] = hit_positions[:,0]
+                data[2, hit_rows, hit_cols] = hit_positions[:,1]
+                data[3, hit_rows, hit_cols] = hit_positions[:,2]
+
+                data[1, hit_rows_d, hit_cols_d] = .0
+                data[2, hit_rows_d, hit_cols_d] = .0
+                data[3, hit_rows_d, hit_cols_d] = .0
+        else:
+            data[0, hit_rows, hit_cols] = hit_charges
+            # kill
+            data[0, hit_rows_d, hit_cols_d] = .0
+
+            if self.use_positions:
+                data[1, hit_rows, hit_cols] = hit_positions[:,0]
+                data[2, hit_rows, hit_cols] = hit_positions[:,1]
+                data[3, hit_rows, hit_cols] = hit_positions[:,2]
+
+                data[1, hit_rows_d, hit_cols_d] = .0
+                data[2, hit_rows_d, hit_cols_d] = .0
+                data[3, hit_rows_d, hit_cols_d] = .0
+
+        return data
+    
+class CNNDatasetDeadPMT(CNNDataset):
+    def __init__(self, h5file, pmt_positions_file, use_times=True, use_charges=True, use_positions=False, transforms=None, one_indexed=True, channel_scaling=None, geometry_file=None, dead_pmt_rate=None, dead_pmt_seed=None):
+        super().__init__(h5file, pmt_positions_file, use_times=use_times, use_charges=use_charges, use_positions=use_positions, transforms=transforms, one_indexed=one_indexed, channel_scaling=channel_scaling, geometry_file=geometry_file)
+        self.dead_pmt_rate = dead_pmt_rate
+        self.dead_pmt_seed = dead_pmt_seed
+    
+    def process_data(self, hit_pmts, hit_times, hit_charges, hit_positions=None, double_cover = None, transforms = None):
+        """
+        Returns event data from dataset associated with a specific index
+
+        Parameters
+        ----------
+        hit_pmts: array_like of int
+            Array of hit PMT IDs
+        hit_times: array_like of float
+            Array of PMT hit times
+        hit_charges: array_like of float
+            Array of PMT hit charges
+        
+        Returns
+        -------
+        data: ndarray
+            Array in image-like format (channels, rows, columns) for input to CNN network.
+        """
+        if self.one_indexed:
+            hit_pmts = hit_pmts-1  # SK cable numbers start at 1
+        
+        dead_pmts = self.dead_pmts # int Array of dead PMT IDs
+
+        hit_rows = self.pmt_positions[hit_pmts, 0]
+        hit_cols = self.pmt_positions[hit_pmts, 1]
+
+        hit_rows_d = self.pmt_positions[dead_pmts, 0]
+        hit_cols_d = self.pmt_positions[dead_pmts, 1]
+
+        data = np.zeros(self.data_size, dtype=np.float32)
+
+        if self.use_times and self.use_charges:
+            # print('----------------------------------')
+            # print('len dead PMTs', len(dead_pmts))
+            # print('len(hit_pmts )', len(hit_pmts))
+            # print('len(hit_chrgs)', len(hit_charges))
+            # print('len(hit_times)', len(hit_times))
+            
+            data[0, hit_rows, hit_cols] = hit_times
+            data[1, hit_rows, hit_cols] = hit_charges
+
+            # print('non-zero times in data (before)', np.count_nonzero(data[0]))
+            # print('non-zero chrgs in data (before)', np.count_nonzero(data[1]))
+
+            # kill
+            data[0, hit_rows_d, hit_cols_d] = .0
+            data[1, hit_rows_d, hit_cols_d] = .0
+
+            # print('non-zero times in data (after) ', np.count_nonzero(data[0]))
+            # print('non-zero chrgs in data (after) ', np.count_nonzero(data[1]))
+
+            if self.use_positions:
+                data[2, hit_rows, hit_cols] = hit_positions[:,0]
+                data[3, hit_rows, hit_cols] = hit_positions[:,1]
+                data[4, hit_rows, hit_cols] = hit_positions[:,2]
+
+                data[2, hit_rows_d, hit_cols_d] = .0
+                data[3, hit_rows_d, hit_cols_d] = .0
+                data[4, hit_rows_d, hit_cols_d] = .0
+
+        elif self.use_times:
+            data[0, hit_rows, hit_cols] = hit_times
+            # kill
+            data[0, hit_rows_d, hit_cols_d] = .0
+
+            if self.use_positions:
+                data[1, hit_rows, hit_cols] = hit_positions[:,0]
+                data[2, hit_rows, hit_cols] = hit_positions[:,1]
+                data[3, hit_rows, hit_cols] = hit_positions[:,2]
+
+                data[1, hit_rows_d, hit_cols_d] = .0
+                data[2, hit_rows_d, hit_cols_d] = .0
+                data[3, hit_rows_d, hit_cols_d] = .0
+        else:
+            data[0, hit_rows, hit_cols] = hit_charges
+            # kill
+            data[0, hit_rows_d, hit_cols_d] = .0
+
+            if self.use_positions:
+                data[1, hit_rows, hit_cols] = hit_positions[:,0]
+                data[2, hit_rows, hit_cols] = hit_positions[:,1]
+                data[3, hit_rows, hit_cols] = hit_positions[:,2]
+
+                data[1, hit_rows_d, hit_cols_d] = .0
+                data[2, hit_rows_d, hit_cols_d] = .0
+                data[3, hit_rows_d, hit_cols_d] = .0
+
+        return data
+
+    # def process_data(self, hit_pmts, hit_times, hit_charges, hit_positions=None, double_cover = None, transforms = None):
+    #     dead_pmt_rate = self.dead_pmt_rate # if self.dead_pmt_rate is not None else 0.8
+    #     hit_charges_copy = hit_charges.copy()
+    #     hit_times_copy = hit_times.copy()
+
+    #     if dead_pmt_rate is not None and dead_pmt_rate > 0:
+    #         # print("killing PMTs with prob: ", dead_pmt_rate)
+    #         np.random.seed(self.dead_pmt_seed if self.dead_pmt_seed is not None else 42)
+    #         zero_mask = np.random.rand(*hit_charges.shape) < dead_pmt_rate
+    #         # hit_charges_copy = np.zeros(*hit_charges.shape, dtype=np.float32)
+    #         hit_charges_copy = np.where(zero_mask, 0., hit_charges)
+    #         # hit_times_copy = np.zeros(*hit_charges.shape, dtype=np.float32)
+    #         hit_times_copy = np.where(zero_mask, 0., hit_times)
+
+    #     # print("before:", hit_charges)
+    #     # print("after: ", hit_charges_copy)
+    #     # print(f"L0: {np.sum(hit_charges != 0.)} -> {np.sum(hit_charges_copy != 0.)}. Change %: { round( np.sum(hit_charges_copy == 0.)/np.sum(hit_charges != 0.) , 2) }")
+    #     # print("h5 charge L0-norm (after):  ", np.sum(hit_charges_copy != 0.))
+    #     # print("h5 charge L0-norm (after - before):  ",  np.sum(hit_charges_copy != 0.) - np.sum(hit_charges != 0.))
+
+    #     return super().process_data(hit_pmts, hit_times, hit_charges_copy, hit_positions, double_cover, transforms)
 

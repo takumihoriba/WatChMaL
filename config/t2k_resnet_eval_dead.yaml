@@ -4,14 +4,14 @@ data:
   dataset:
     # h5file: '/data/thoriba/t2k/datasets/oct20/oct20_combine_flatE/combine_combine.hy'
     h5file: '/fast_scratch_2/fcormier/t2k/ml/data/oct20_combine_flatE/combine_combine.hy'
-    _target_: watchmal.dataset.cnn.cnn_dataset.CNNDataset
+    _target_: watchmal.dataset.cnn.cnn_dataset.CNNDatasetDeadPMT
     # pmt_positions_file: /data/thoriba/t2k/imagefile/skdetsim_imagefile.npy
     pmt_positions_file: /fast_scratch/WatChMaL/data/T2K/image_files/skdetsim_imagefile.npy
     use_positions: False
     geometry_file: /home/fcormier/t2k/ml/t2k_ml_training/data/geofile_skdetsim.npz
     channel_scaling:
       time: [950, 10]
-    dead_pmt_rate: .2
+    dead_pmt_rate: null
     dead_pmt_seed: null
 model:
   _target_: watchmal.model.resnet.resnet34

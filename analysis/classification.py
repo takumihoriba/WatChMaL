@@ -133,6 +133,17 @@ def compute_AUC(runs, signal_labels, background_labels, selection=None):
         auc = metrics.auc(fpr, tpr)
     return auc
 
+def compute_ROC(runs, signal_labels, background_labels, selection=None):
+    '''
+    return ROC curve for the first run in runs
+    '''
+    for r in runs:
+        run_selection = r.selection if selection is None else selection
+        selected_signal = np.isin(r.true_labels, signal_labels)[run_selection]
+        selected_discriminator = r.discriminator(signal_labels, background_labels)[run_selection]
+        fpr, tpr, _ = metrics.roc_curve(selected_signal, selected_discriminator)
+        return (fpr, tpr)
+
 def plot_efficiency_profile(runs, binning, selection=None, select_labels=None, ax=None, fig_size=None, x_label="",
                             y_label="", legend='upper left', y_lim=None, label=None, **plot_args):
     """

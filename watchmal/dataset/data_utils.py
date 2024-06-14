@@ -166,7 +166,7 @@ def save_fig(data,isPost, displacement=0, counter=0):
     # cbar.ax.set_ylabel("PMT Time", rotation=270)
     plt.xlabel('X pixels')
     plt.ylabel('Y pixels')
-    path_fig = '/data/thoriba/t2k/plots/charge_plot/dead_80/'
+    path_fig = '/data/thoriba/t2k/plots/charge_plot/dead_CNN_0/'
     os.makedirs(path_fig, exist_ok=True)
     if isPost:
         plt.savefig(path_fig+str(counter)+'_post_rot_dc_img_dis'+str(displacement)+'.png')
