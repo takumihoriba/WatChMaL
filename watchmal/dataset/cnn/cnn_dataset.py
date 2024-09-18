@@ -208,8 +208,9 @@ class CNNDataset(H5Dataset):
         for t in self.transforms:
             #apply each transformation only half the time
             #Probably should be implemented in data_utils?
-            if random.getrandbits(1):
-                data_dict = t(data_dict)
+            # if random.getrandbits(1):
+            # CHANGE: apply transformation always.
+            data_dict = t(data_dict)
         if 0:
             du.save_fig(data_dict["data"][1],True, counter = self.counter)
         processed_data = self.double_cover(data_dict["data"])
@@ -652,8 +653,8 @@ class CNNDatasetDeadPMT(CNNDataset):
                 print('non-zero chrgs in data (before)', ch_pre)
 
             # kill dead PMTs according to dead PMT IDs
-            data[0, hit_rows_d, hit_cols_d] = .0
-            data[1, hit_rows_d, hit_cols_d] = .0
+            # data[0, hit_rows_d, hit_cols_d] = .0
+            # data[1, hit_rows_d, hit_cols_d] = .0
 
             
             if self.use_positions:
@@ -731,6 +732,80 @@ class CNNDatasetDeadPMT(CNNDataset):
                     data[1, hit_rows_d, hit_cols_d] = 1
 
         return data
+
+    # kill dead PMTs as transformation. Largely adapted from process_data()
+    def kill_dead_pmts(self, data_dict):
+
+
+        
+
+        dead_pmts = self.dead_pmts # int array of dead PMT IDs. Zero-idxed.
+
+        hit_rows_d = self.pmt_positions[dead_pmts, 0]
+        hit_cols_d = self.pmt_positions[dead_pmts, 1]
+
+        data = data_dict["data"]
+
+        ch_pre = np.count_nonzero(data[1])
+
+        # set True to print out some information per batch for test / debug
+        debug_mode = 0
+
+        if self.use_times and self.use_charges:
+ 
+            # kill dead PMTs according to dead PMT IDs
+            data[0, hit_rows_d, hit_cols_d] = .0
+            data[1, hit_rows_d, hit_cols_d] = .0
+
+            
+            if self.use_positions:
+                data[2, hit_rows_d, hit_cols_d] = .0
+                data[3, hit_rows_d, hit_cols_d] = .0
+                data[4, hit_rows_d, hit_cols_d] = .0
+
+            if self.use_dead_pmt_mask:
+                if self.use_positions:
+                    data[5, hit_rows_d, hit_cols_d] = 1
+                else:
+                    data[2, hit_rows_d, hit_cols_d] = 1
+
+        elif self.use_times:
+            data[0, hit_rows_d, hit_cols_d] = .0
+
+            if self.use_positions:
+                # kill
+                data[1, hit_rows_d, hit_cols_d] = .0
+                data[2, hit_rows_d, hit_cols_d] = .0
+                data[3, hit_rows_d, hit_cols_d] = .0
+            
+            if self.use_dead_pmt_mask:
+                if self.use_positions:
+                    data[4, hit_rows_d, hit_cols_d] = 1
+                else:
+                    data[1, hit_rows_d, hit_cols_d] = 1
+        else:
+            data[0, hit_rows_d, hit_cols_d] = .0
+
+            if self.use_positions:
+                data[1, hit_rows_d, hit_cols_d] = .0
+                data[2, hit_rows_d, hit_cols_d] = .0
+                data[3, hit_rows_d, hit_cols_d] = .0
+            
+            if self.use_dead_pmt_mask:
+                if self.use_positions:
+                    data[4, hit_rows_d, hit_cols_d] = 1
+                else:
+                    data[1, hit_rows_d, hit_cols_d] = 1
+        
+        
+        data_dict["data"] = data
+        if np.random.rand() < -1:
+            ch_post = np.count_nonzero(data_dict['data'][1])
+            print("before, after", ch_pre, ch_post)
+            
+
+        return data_dict
+
     
 
 

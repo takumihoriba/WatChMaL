@@ -2,7 +2,7 @@ data:
   split_path: '/scratch/fcormier/t2k/ml/output_skdetsim/jan23_electrons_forRegression_5M_1/train_val_test_gt200Hits_FCTEST_nFolds20_fold0.npz' 
   dataset:
     h5file: '$SLURM_TMPDIR/digi_combine.hy'
-    _target_: watchmal.dataset.cnn.cnn_dataset.CNNDatasetDeadPMT
+    _target_: watchmal.dataset.dann.dann_dataset.DANNDataset
     pmt_positions_file: /data/thoriba/t2k/imagefile/skdetsim_imagefile.npy
     use_positions: False
     geometry_file: /home/fcormier/t2k/ml/training/t2k_ml_training/data/geofile_skdetsim.npz
@@ -19,7 +19,7 @@ model:
   dropout_p: 0.
   # conv_pad_mode: 'zeros'
 engine:
-  _target_: watchmal.engine.regression.RegressionEngine
+  _target_: watchmal.engine.domain_adaptation.DANNEngine
   truth_key: 'momenta'
 tasks:
   train:

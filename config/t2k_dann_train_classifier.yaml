@@ -1,0 +1,113 @@
+data:
+  source:
+    split_path: '/data/thoriba/t2k/indices/apr3_eMuPiPlus_1500MeV_small_1/train_val_test_gt200Hits_FCTEST_nFolds10_fold0.npz'
+    dataset:
+      h5file: '/data/thoriba/t2k/datasets/apr3_eMuPiPlus_1500MeV_small_1/multi_combine.hy'
+      _target_: watchmal.dataset.cnn.cnn_dataset.CNNDataset
+      pmt_positions_file: '/fast_scratch/WatChMaL/data/T2K/image_files/skdetsim_imagefile.npy'
+      channel_scaling:
+        time: [400, 1000]
+  target:
+    split_path: '/data/thoriba/t2k/indices/apr3_eMuPiPlus_1500MeV_small_1/train_val_test_gt200Hits_FCTEST_nFolds10_fold0.npz'
+    dataset:
+      h5file: '/data/thoriba/t2k/datasets/apr3_eMuPiPlus_1500MeV_small_1/multi_combine.hy'
+      _target_: watchmal.dataset.cnn.cnn_dataset.CNNDataset
+      pmt_positions_file: '/fast_scratch/WatChMaL/data/T2K/image_files/skdetsim_imagefile.npy'
+      channel_scaling:
+        time: [400, 1000]
+
+model:
+  _target_: watchmal.model.dann.DANNModel
+  feature_extractor:
+    _target_: watchmal.model.resnet.resnet34
+    num_input_channels: 2
+    num_output_channels: 256  
+    stride: 1
+    kernelSize: 1
+    dropout_p: 0.
+  class_classifier:
+    _target_: watchmal.model.dann.SimpleNNClassifier
+    input_dim: 256   # Should match feature_extractor output
+    hidden_dim: 128  # You can adjust this based on your model architecture
+    output_dim: 3    # Number of classes
+    dropout_p: 0.2   # Dropout probability
+  domain_classifier:
+    _target_: watchmal.model.dann.SimpleNNClassifier
+    input_dim: 256  # Should match feature_extractor output
+    hidden_dim: 128  # You can adjust this based on your model architecture
+    output_dim: 2    # Binary classification
+    dropout_p: 0.2   # Dropout probability
+
+engine:
+  # _target_: watchmal.engine.domain_adaptation.DANNEngine
+  _target_: watchmal.engine.classification_dann.DANNClassifierEngine
+  truth_key: 'labels'
+  label_set: [0,1,2]
+
+tasks:
+  train:
+    epochs: 30
+    val_interval: 100
+    num_val_batches: 2
+    checkpointing: false
+    loss:
+      classification:
+        _target_: torch.nn.CrossEntropyLoss
+      domain:
+        _target_: torch.nn.CrossEntropyLoss
+        # BCEWithLogitsLoss
+    data_loaders:
+      source_train:
+        split_key: train_idxs
+        batch_size: 15
+        num_workers: 1
+        sampler:
+          _target_: torch.utils.data.sampler.SubsetRandomSampler
+      target_train:
+        # for dev purpose
+        split_key: train_idxs
+        batch_size: 15
+        num_workers: 1
+        sampler:
+          _target_: torch.utils.data.sampler.SubsetRandomSampler
+        # post_transforms:
+        #   - kill_dead_pmts
+      source_validation:
+        split_key: val_idxs
+        batch_size: 15
+        num_workers: 1
+        sampler:
+          _target_: torch.utils.data.sampler.SubsetRandomSampler
+      target_validation:
+        split_key: val_idxs
+        batch_size: 15
+        num_workers: 1
+        sampler:
+          _target_: torch.utils.data.sampler.SubsetRandomSampler
+    optimizers:
+      _target_: torch.optim.Adam
+      lr: 0.01
+      weight_decay: 0
+    scheduler:
+      _target_: torch.optim.lr_scheduler.ExponentialLR
+      gamma: 0.8
+    # grl_schedule:
+    #   _target_: watchmal.model.dann.GradientReversalScheduler
+    #   init_lambda: 0
+    #   max_lambda: 1.0
+    #   gamma: 10
+    #   max_iter: 10000
+
+  evaluate:
+    data_loaders:
+      target_test:
+        split_key: test_idxs
+        batch_size: 2000
+        num_workers: 6
+        sampler:
+          _target_: torch.utils.data.sampler.SubsetRandomSampler
+
+gpu_list:
+- 1
+seed: null
+dump_path: ./outputs/

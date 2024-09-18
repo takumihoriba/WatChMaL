@@ -30,11 +30,21 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler, PowerTransformer
 import h5py
 import joblib
 
-class DANNDataset(CNNDataset):
+class DANNDatasetBase(CNNDataset):
     def __init__(self, h5file, pmt_positions_file, domain_labels, use_times=True, use_charges=True, use_positions=False, transforms=None, one_indexed=True, channel_scaling=None, geometry_file=None):
         super().__init__(h5file, pmt_positions_file, use_times=use_times, use_charges=use_charges, use_positions=use_positions, transforms=transforms, one_indexed=one_indexed, channel_scaling=channel_scaling, geometry_file=geometry_file)
-        self.domain_labels = domain_labels
+        self.set_domain(domain_labels)
     
+    def set_domain(self, domain_labels):
+        if domain_labels is None:
+            self.domain_labels = np.zeros(len(self))
+            # set it like this for now
+            self.domain_labels[:len(self)//2] = 1
+            
+            # raise ValueError("Domain labels must be provided")
+        else:
+            self.domain_labels = domain_labels
+
     def __getitem__(self, item):
         data_dict = super().__getitem__(item)
 
@@ -42,3 +52,12 @@ class DANNDataset(CNNDataset):
         data_dict['domain'] = self.domain_labels[item]
 
         return data_dict
+
+class DANNSourceDataset(DANNDatasetBase):
+    def __getitem__(self, item):
+        return super().__getitem__(item)
+        # return input_tensor, torch.tensor(label, dtype=torch.long)
+
+class DANNTargetDataset(DANNDatasetBase):
+    def __getitem__(self, item):
+        return super().__getitem__(item)
