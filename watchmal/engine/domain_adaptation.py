@@ -104,6 +104,7 @@ class DANNEngine(ReconstructionEngine):
         if train:
             with torch.set_grad_enabled(train):
                 # class output (predicted label for main classification task (mu, e, pi etc)) from source data.
+                # this is the output of the model, which is the label/regression prediction from the class predictor.
                 class_output = self.model.class_classifier(features_source)
                 lambda_param = 1 # self.grl_scheduler.get_lambda()
 
@@ -198,7 +199,7 @@ class DANNEngine(ReconstructionEngine):
                               f" Epoch time {step_time-epoch_start_time}"
                               f" Total time {step_time-start_time}")
                         print(f"  Training   {', '.join(f'{k}: {v:.5g}' for k, v in metrics.items())}")
-                    self.validate(source_val_iter, num_val_batches, checkpointing)
+                    self.validate(source_val_iter, target_val_iter,  num_val_batches, checkpointing)
 
             if self.rank == 0 and (save_interval is not None) and ((self.epoch+1) % save_interval == 0):
                 self.save_state(suffix=f'_epoch_{self.epoch+1}')
@@ -218,25 +219,39 @@ class DANNEngine(ReconstructionEngine):
     # TODO: logic in training and validation should reflect that we have validation data from source and target datasets.
 
 
-    def validate(self, val_iter, num_val_batches, checkpointing):
+    def validate(self, source_val_iter, target_val_iter, num_val_batches, checkpointing):
         print('validation from DANNEngine')
         self.model.eval()
         val_metrics = None
-        
+
         for val_batch in range(num_val_batches):
             try:
-                val_data = next(val_iter)
+                source_val_data = next(source_val_iter)
             except StopIteration:
-                del val_iter
+                del source_val_iter
                 if self.is_distributed:
-                    self.data_loaders["validation"].sampler.set_epoch(self.data_loaders["validation"].sampler.epoch+1)
-                val_iter = iter(self.data_loaders["validation"])
-                val_data = next(val_iter)
+                    self.data_loaders["source_validation"].sampler.set_epoch(self.data_loaders["source_validation"].sampler.epoch+1)
+                source_val_iter = iter(self.data_loaders["source_validation"])
+                source_val_data = next(source_val_iter)
+            
+            try:
+                target_val_data = next(target_val_iter)
+            except StopIteration:
+                if self.is_distributed:
+                    self.data_loaders["target_validation"].sampler.set_epoch(
+                        self.data_loaders["target_validation"].sampler.epoch + 1)
+                target_val_iter = iter(self.data_loaders["target_validation"])
+                target_val_data = next(target_val_iter)
 
-            self.data = val_data['data'].to(self.device)
-            self.target = val_data[self.truth_key].to(self.device)
+            # confusing thing: target and target_data are different things.
+            self.source_data = source_val_data['data'].to(self.device)
+            self.target_data = target_val_data['data'].to(self.device)
+            self.data = torch.cat([self.source_data, self.target_data])
+            self.target = source_val_data[self.truth_key].to(self.device)
 
+            # Forward pass
             outputs, metrics = self.forward(False)
+
             if val_metrics is None:
                 val_metrics = metrics
             else:
@@ -245,6 +260,7 @@ class DANNEngine(ReconstructionEngine):
 
         val_metrics = {k: v/num_val_batches for k, v in val_metrics.items()}
         val_metrics = self.get_synchronized_metrics(val_metrics)
+        
         if self.rank == 0:
             log_entries = {"iteration": self.iteration, "epoch": self.epoch, **val_metrics, "saved_best": False}
             print(f"  Validation {', '.join(f'{k}: {v:.5g}' for k, v in val_metrics.items())}", end="")
