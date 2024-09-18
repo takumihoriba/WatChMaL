@@ -55,20 +55,28 @@ class DANNClassifierEngine(DANNEngine):
 
     def forward(self, train=True):
         # features are G_f([x_source, x_target]) == representation of source data and target data (concat)
-        features = self.model.feature_extractor(self.data)
-        # features from soure data, features from target data
-        features_source = self.model.feature_extractor(self.source_data)
+        # features = self.model.feature_extractor(self.data)
+        # # features from soure data, features from target data
+        # features_source = self.model.feature_extractor(self.source_data)
+        
+        # DDP version of above code
+        features = self.module.feature_extractor(self.data)
+        features_source = self.module.feature_extractor(self.source_data)
+
         
         with torch.set_grad_enabled(train):
             # class output (predicted label for main classification task (mu, e, pi etc)) from source data.
             # class_output is class prediction from class predictor. Used to be called model_out in classification.py
-            class_output = self.model.class_classifier(features_source)
+            # class_output = self.model.class_classifier(features_source)
+            class_output = self.module.class_classifier(features_source)
+            
             softmax = self.softmax(class_output)
             predicted_labels = torch.argmax(class_output, dim=-1)
             lambda_param = 1 # self.grl_scheduler.get_lambda()
 
             reverse_features = self.grl(features)
-            domain_output = self.model.domain_classifier(reverse_features)
+            # domain_output = self.model.domain_classifier(reverse_features)
+            domain_output = self.module.domain_classifier(reverse_features)
             
             class_loss = self.criterion(class_output, self.target)
             class_accuracy = (predicted_labels == self.target).sum() / float(predicted_labels.nelement())

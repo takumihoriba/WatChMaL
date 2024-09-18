@@ -105,6 +105,6 @@ tasks:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
 
 gpu_list:
-- 2
+- 1
 seed: null
 dump_path: ./outputs/
