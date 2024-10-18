@@ -34,7 +34,7 @@ class DANNModel(nn.Module):
         )
         self.grl = GradientReversalLayerModule()
 
-    def forward(self, x, alpha):
+    def forward(self, x, alpha=0):
         features = self.feature_extractor(x)
         class_output = self.class_classifier(features)
         reverse_features = self.grl(features)
@@ -44,6 +44,25 @@ class DANNModel(nn.Module):
 class SimpleNNClassifier(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim=2, dropout_p=0.5):
         super(SimpleNNClassifier, self).__init__()
+        
+        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        self.dropout = nn.Dropout(dropout_p)
+        self.batch_norm = nn.BatchNorm1d(hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, output_dim)
+        
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.batch_norm(x)
+        x = F.relu(x)
+        x = self.dropout(x)
+        x = self.fc2(x)
+        
+        return x
+    
+
+class DomainClassifier(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim=2, dropout_p=0.5):
+        super(DomainClassifier, self).__init__()
         
         # Define the first fully connected layer
         self.fc1 = nn.Linear(input_dim, hidden_dim)

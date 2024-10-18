@@ -93,8 +93,8 @@ class DANNClassifierEngine(DANNEngine):
             metrics = {
                 'loss': self.loss.item(),
                 'class_loss': class_loss.item(),
-                'class_accuracy': class_accuracy,
+                'class_accuracy': class_accuracy.item(),
                 'domain_loss': domain_loss.item(),
-                'domain_accuracy': domain_accuracy,
+                'domain_accuracy': domain_accuracy.item(),
             }
         return outputs, metrics

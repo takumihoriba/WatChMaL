@@ -15,6 +15,9 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 import torch.multiprocessing as mp
 
+# import torchviz
+from torchviz import make_dot
+
 # generic imports
 import logging
 import os
@@ -99,6 +102,22 @@ def main_worker_function(rank, ngpus_per_node, is_distributed, config, hydra_con
 
     # Instantiate model and engine
     model = instantiate(config.model).to(device)
+
+
+    plot_torchviz = True
+    if plot_torchviz:
+        dummy_input = torch.randn(64, 2, 1, 1).to(device)  # Example for a model expecting image input (batch_size=1, channels=3, height=224, width=224)
+        # Perform a forward pass
+        output = model(dummy_input)
+
+        # Use torchviz to create the computational graph
+        dot = make_dot(output, params=dict(model.named_parameters()))
+        
+        # Save the graph to a file
+        dot.render("model_graph", format="png")
+
+        log.info("Model computational graph saved as 'model_graph.png'")
+
 
     # Configure the device to be used for model training and inference
     if is_distributed:
