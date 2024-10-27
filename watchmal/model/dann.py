@@ -59,37 +59,39 @@ class SimpleNNClassifier(nn.Module):
         
         return x
     
-
-class DomainClassifier(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim=2, dropout_p=0.5):
-        super(DomainClassifier, self).__init__()
+    
+class FlexibleNNClassifier(nn.Module):
+    def __init__(self, input_dim, hidden_dims, output_dim=2, dropout_p=0.5):
+        """
+        Initialize the FlexibleNNClassifier.
         
-        # Define the first fully connected layer
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        Parameters:
+        - input_dim: int, the dimension of the input features.
+        - hidden_dims: list of int, the dimensions of the hidden layers.
+        - output_dim: int, the dimension of the output layer.
+        - dropout_p: float, the dropout probability.
+        """
+        super(FlexibleNNClassifier, self).__init__()
         
-        # Define a dropout layer
-        self.dropout = nn.Dropout(dropout_p)
+        layers = []
         
-        # Define a batch normalization layer
-        self.batch_norm = nn.BatchNorm1d(hidden_dim)
+        # fisrt layer
+        layers.append(nn.Linear(input_dim, hidden_dims[0]))
+        layers.append(nn.BatchNorm1d(hidden_dims[0]))
+        layers.append(nn.ReLU())
+        layers.append(nn.Dropout(dropout_p))
         
-        # Define the second fully connected layer
-        self.fc2 = nn.Linear(hidden_dim, output_dim)
+        # subsequent hidden layers
+        for i in range(1, len(hidden_dims)):
+            layers.append(nn.Linear(hidden_dims[i-1], hidden_dims[i]))
+            layers.append(nn.BatchNorm1d(hidden_dims[i]))
+            layers.append(nn.ReLU())
+            layers.append(nn.Dropout(dropout_p))
+        
+        # output layer
+        layers.append(nn.Linear(hidden_dims[-1], output_dim))
+        
+        self.model = nn.Sequential(*layers)
         
     def forward(self, x):
-        # Apply the first fully connected layer
-        x = self.fc1(x)
-        
-        # Apply batch normalization
-        x = self.batch_norm(x)
-        
-        # Apply ReLU activation function
-        x = F.relu(x)
-        
-        # Apply dropout
-        x = self.dropout(x)
-        
-        # Apply the second fully connected layer
-        x = self.fc2(x)
-        
-        return x
+        return self.model(x)

@@ -100,6 +100,8 @@ class DANNEngine(ReconstructionEngine):
         # features from soure data, features from target data
         features_source = self.model.feature_extractor(self.source_data)
         # features_target = self.model.feature_extractor(self.target_data)
+
+        # TODO: forward pass different for training f or r. For r, 
         
         if train:
             with torch.set_grad_enabled(train):
@@ -124,7 +126,6 @@ class DANNEngine(ReconstructionEngine):
                     'domain_loss': domain_loss.item()
                 }
         else:
-            # not training, so no need to compute gradients
             with torch.set_grad_enabled(train):
                 class_output = self.model.class_classifier(features)
 
@@ -171,6 +172,35 @@ class DANNEngine(ReconstructionEngine):
             source_iter = iter(source_train_loader)
             target_iter = iter(target_train_loader)
 
+            # TODO: turn off gradient computations of parameters for f (main network)
+            # TODO: train r (domain classifier, or adversary) for K iterations.
+            # TODO: use stochastic gradient "ascent" for r, not descent. loss = -log p_r (z | s)
+            K = 5
+            for param in self.model.class_classifier.parameters():
+                param.requires_grad = False
+            
+            for k in range(K):
+                source_data = next(source_iter)
+                target_data = next(target_iter)
+
+                self.source_data = source_data['data'].to(self.device)
+                self.target_data = target_data['data'].to(self.device)
+                self.data = torch.cat([self.source_data, self.target_data])
+                self.target = source_data[self.truth_key].to(self.device)
+
+                self.optimizer.zero_grad()
+                features = self.model.feature_extractor(self.data)
+                reverse_features = self.grl(features, alpha=self.epoch / epochs)
+                domain_output = self.model.domain_classifier(reverse_features)
+                domain_labels = torch.cat([torch.zeros(len(self.source_data)), torch.ones(len(self.target_data))]).to(self.device)
+                loss = self.adversary_loss(domain_output, domain_labels)
+                loss.backward()
+                self.optimizer.step()
+
+            # TODO: turn off gradient computations of parameters for r (adversary)
+            # TODO: with r frozen, update f by SGD of loss = -log p_f (y | x) + lambda * log p_r (z | s)
+
+
             for self.step in range(steps_per_epoch):
                 source_data = next(source_iter)
                 target_data = next(target_iter)
@@ -188,7 +218,8 @@ class DANNEngine(ReconstructionEngine):
 
                 log_entries = {"iteration": self.iteration, "epoch": self.epoch, **metrics}
                 self.train_log.log(log_entries)
-
+                
+                # should be refactored.
                 if self.iteration % val_interval == 0:
                     if self.rank == 0:
                         previous_step_time = step_time
@@ -215,8 +246,6 @@ class DANNEngine(ReconstructionEngine):
             log.info(f"Epoch {self.epoch} completed in {datetime.now() - epoch_start_time}")
             log.info(f"Training {epochs} epochs completed in {datetime.now()-start_time}")
             self.val_log.close()
-
-    # TODO: logic in training and validation should reflect that we have validation data from source and target datasets.
 
 
     def validate(self, source_val_iter, target_val_iter, num_val_batches, checkpointing):
