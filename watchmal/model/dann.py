@@ -61,7 +61,7 @@ class SimpleNNClassifier(nn.Module):
     
     
 class FlexibleNNClassifier(nn.Module):
-    def __init__(self, input_dim, hidden_dims, output_dim=2, dropout_p=0.5):
+    def __init__(self, input_dim, hidden_dims, output_dim=2, dropout_p=0.2):
         """
         Initialize the FlexibleNNClassifier.
         
@@ -95,3 +95,19 @@ class FlexibleNNClassifier(nn.Module):
         
     def forward(self, x):
         return self.model(x)
+    
+
+class PreTrainedFeatureExtractor(nn.Module):
+    def __init__(self, pretrained_model):
+        super(PreTrainedFeatureExtractor, self).__init__()
+
+
+        self.base_model = pretrained_model
+        
+        # Remove the last fully connected layer
+        # For ResNet, this is typically `fc`
+        self.base_model.fc = nn.Identity()  # Replace with an identity function
+
+    def forward(self, x):
+        # Forward pass through the feature extractor
+        return self.base_model(x)

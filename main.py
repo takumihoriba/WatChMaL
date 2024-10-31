@@ -104,7 +104,7 @@ def main_worker_function(rank, ngpus_per_node, is_distributed, config, hydra_con
     model = instantiate(config.model).to(device)
 
 
-    plot_torchviz = True
+    plot_torchviz = 0
     if plot_torchviz:
         dummy_input = torch.randn(64, 2, 1, 1).to(device)  # Example for a model expecting image input (batch_size=1, channels=3, height=224, width=224)
         # Perform a forward pass

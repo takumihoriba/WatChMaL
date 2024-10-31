@@ -15,7 +15,7 @@ data:
       pmt_positions_file: '/fast_scratch/WatChMaL/data/T2K/image_files/skdetsim_imagefile.npy'
       channel_scaling:
         time: [400, 1000]
-      dead_pmt_rate: 0.2
+      dead_pmt_rate: 0.3
       dead_pmt_seed: 42  
 
 model:
@@ -23,20 +23,21 @@ model:
   feature_extractor:
     _target_: watchmal.model.resnet.resnet34
     num_input_channels: 2
-    num_output_channels: 256  
+    num_output_channels: 3  
     stride: 1
     kernelSize: 1
     dropout_p: 0.
+
   class_classifier:
-    _target_: watchmal.model.dann.SimpleNNClassifier
-    input_dim: 256   # Should match feature_extractor output
-    hidden_dim: 128  # You can adjust this based on your model architecture
+    _target_: watchmal.model.dann.FlexibleNNClassifier
+    input_dim: 512   # Should match feature_extractor output
+    hidden_dims: [128, 64]  # You can adjust this based on your model architecture
     output_dim: 3    # Number of classes
     dropout_p: 0.2   # Dropout probability
   domain_classifier:
-    _target_: watchmal.model.dann.SimpleNNClassifier
-    input_dim: 256  # Should match feature_extractor output
-    hidden_dim: 128  # You can adjust this based on your model architecture
+    _target_: watchmal.model.dann.FlexibleNNClassifier
+    input_dim: 512  # Should match feature_extractor output
+    hidden_dims: [128, 64, 32]  # You can adjust this based on your model architecture
     output_dim: 2    # Binary classification
     dropout_p: 0.2   # Dropout probability
 
@@ -44,10 +45,11 @@ engine:
   _target_: watchmal.engine.classification_dann.DANNClassifierEngine
   truth_key: 'labels'
   label_set: [0,1,2]
+  pretrained_model_path: /data/thoriba/t2k/models/14042024-00062_jun17/ClassifierEngine_ResNet_BEST.pth
 
 tasks:
   train:
-    epochs: 30
+    epochs: 20
     val_interval: 100
     num_val_batches: 16
     checkpointing: false
@@ -64,7 +66,6 @@ tasks:
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
       target_train:
-        # for dev purpose
         split_key: train_idxs
         batch_size: 16
         num_workers: 1
@@ -106,6 +107,6 @@ tasks:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
 
 gpu_list:
-- 2
+- 3
 seed: null
 dump_path: ./outputs/

@@ -24,13 +24,14 @@ from watchmal.utils.logging_utils import CSVLog
 log = logging.getLogger(__name__)
 
 class DANNEngine(ReconstructionEngine):
-    def __init__(self, truth_key, model, rank, gpu, dump_path):
+    def __init__(self, truth_key, model, rank, gpu, dump_path, pretrained_model_path=None):
         super().__init__(truth_key, model, rank, gpu, dump_path)
         self.grl = GradientReversalLayerModule()
         self.domain_criterion = None
         # self.grl_scheduler = None
         # define simplest grl scheduler here
         self.grl_scheduler = lambda step=0: 1.0
+        self.pretrained_model_path = pretrained_model_path
 
     def configure_loss(self, loss_config):
         # criterion is loss for classification/regression
@@ -93,15 +94,28 @@ class DANNEngine(ReconstructionEngine):
                 else:
                     global_metric_dict[name] = tensor
         return global_metric_dict
+    
+    def load_pretrained_model(self):
+        if self.pretrained_model_path is not None:
+            checkpoint = torch.load(self.pretrained_model_path, map_location=self.device)
+            
+            state_dict = checkpoint['state_dict']
+            print("pretrained: ", state_dict.keys())
+            print("new model:  ", self.model.feature_extractor.state_dict().keys())
+            state_dict = {k.replace('feature_extractor.', ''): v for k, v in state_dict.items()}
+            state_dict.pop("fc.weight", None)
+            state_dict.pop("fc.bias", None)
+
+            self.model.feature_extractor.load_state_dict(state_dict, strict=False)
+            self.model.feature_extractor.fc = nn.Identity()
+            log.info(f"Loaded pretrained model from {self.pretrained_model_path}")
 
     def forward(self, train=True):
-        # features are G_f([x_source, x_target]) == representation of source data and target data (concat)
         features = self.model.feature_extractor(self.data)
-        # features from soure data, features from target data
         features_source = self.model.feature_extractor(self.source_data)
-        # features_target = self.model.feature_extractor(self.target_data)
 
-        # TODO: forward pass different for training f or r. For r, 
+        # TODO: forward pass different for training f or r.
+        # for now this works only for training f.
         
         if train:
             with torch.set_grad_enabled(train):
@@ -118,7 +132,7 @@ class DANNEngine(ReconstructionEngine):
 
                 domain_loss = self.domain_criterion(domain_output, domain_labels.long())
                 
-                self.loss = class_loss + domain_loss
+                self.loss = class_loss - lambda_param * domain_loss
                 
                 metrics = {
                     'loss': self.loss.item(),
@@ -128,7 +142,6 @@ class DANNEngine(ReconstructionEngine):
         else:
             with torch.set_grad_enabled(train):
                 class_output = self.model.class_classifier(features)
-
                 self.loss = self.criterion(class_output, self.target)
                 metrics = {'loss': self.loss.item()}
 
@@ -138,6 +151,8 @@ class DANNEngine(ReconstructionEngine):
         if self.rank == 0:
             log.info(f"Training DANN for {epochs} epochs with {num_val_batches}-batch validation each {val_interval} iterations")
         
+        self.load_pretrained_model()
+
         self.model.train()
         self.epoch = 0
         self.iteration = 0
@@ -178,28 +193,44 @@ class DANNEngine(ReconstructionEngine):
             K = 5
             for param in self.model.class_classifier.parameters():
                 param.requires_grad = False
+            for param in self.model.feature_extractor.parameters():
+                param.requires_grad = False
+            for param in self.model.domain_classifier.parameters():
+                param.requires_grad = True
             
             for k in range(K):
-                source_data = next(source_iter)
-                target_data = next(target_iter)
+                # print(f"Training domain classifier {k}-th epoch")
+                source_iter = iter(source_train_loader)
+                target_iter = iter(target_train_loader)
+                for step in range(steps_per_epoch // 100):
+                    source_data = next(source_iter)
+                    target_data = next(target_iter)
 
-                self.source_data = source_data['data'].to(self.device)
-                self.target_data = target_data['data'].to(self.device)
-                self.data = torch.cat([self.source_data, self.target_data])
-                self.target = source_data[self.truth_key].to(self.device)
+                    self.source_data = source_data['data'].to(self.device)
+                    self.target_data = target_data['data'].to(self.device)
+                    self.data = torch.cat([self.source_data, self.target_data])
+                    self.target = source_data[self.truth_key].to(self.device)
 
-                self.optimizer.zero_grad()
-                features = self.model.feature_extractor(self.data)
-                reverse_features = self.grl(features, alpha=self.epoch / epochs)
-                domain_output = self.model.domain_classifier(reverse_features)
-                domain_labels = torch.cat([torch.zeros(len(self.source_data)), torch.ones(len(self.target_data))]).to(self.device)
-                loss = self.adversary_loss(domain_output, domain_labels)
-                loss.backward()
-                self.optimizer.step()
+                    self.optimizer.zero_grad()
+                    features = self.model.feature_extractor(self.data)
+                    reverse_features = features # self.grl(features, alpha=self.epoch / epochs)
+                    domain_output = self.model.domain_classifier(reverse_features)
+                    domain_labels = torch.cat([torch.zeros(len(self.source_data)), torch.ones(len(self.target_data))]).to(self.device)
+                    loss = self.domain_criterion(domain_output, domain_labels.long())
+                    loss.backward()
+                    self.optimizer.step()
 
             # TODO: turn off gradient computations of parameters for r (adversary)
             # TODO: with r frozen, update f by SGD of loss = -log p_f (y | x) + lambda * log p_r (z | s)
-
+            for param in self.model.class_classifier.parameters():
+                param.requires_grad = True
+            for param in self.model.feature_extractor.parameters():
+                param.requires_grad = True
+            for param in self.model.domain_classifier.parameters():
+                param.requires_grad = False
+            
+            source_iter = iter(source_train_loader)
+            target_iter = iter(target_train_loader)
 
             for self.step in range(steps_per_epoch):
                 source_data = next(source_iter)
@@ -249,7 +280,6 @@ class DANNEngine(ReconstructionEngine):
 
 
     def validate(self, source_val_iter, target_val_iter, num_val_batches, checkpointing):
-        print('validation from DANNEngine')
         self.model.eval()
         val_metrics = None
 
