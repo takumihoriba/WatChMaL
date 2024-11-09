@@ -8,12 +8,15 @@ class GradientReversalLayer(Function):
         ctx.alpha = alpha
         # clone or view as
         # return x.clone()
-        return x.view_as(x)
+        # return x.view_as(x)
+        return x * 1.0
 
     @staticmethod
     def backward(ctx, grad_output):
+        
+        # print("GRL applied (backward path)")
         # removed * ctx.alpha
-        return grad_output.neg(), None
+        return grad_output.neg() * ctx.alpha , None
     
 class GradientReversalLayerModule(nn.Module):
     def __init__(self, lambda_grad=1.0):

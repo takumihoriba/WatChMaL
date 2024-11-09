@@ -162,7 +162,6 @@ class DANNEngine(ReconstructionEngine):
         source_train_loader = self.data_loaders["source_train"]
         target_train_loader = self.data_loaders["target_train"]
 
-        # create iterators for validation data loaders
         source_val_iter = iter(self.data_loaders["source_validation"])
         target_val_iter = iter(self.data_loaders["target_validation"])
         
@@ -170,6 +169,24 @@ class DANNEngine(ReconstructionEngine):
         start_time = datetime.now()
         step_time = start_time
         epoch_start_time = start_time
+
+        # initial training of adversary (just adversary)
+        K = 2
+        if self.pretrained_model_path is None:
+            K = 0
+        
+        self.set_requires_grads_for_models(feature_extractor=False, class_classifier=False, domain_classifier=True)
+
+        steps_per_epoch = min(len(source_train_loader), len(target_train_loader))
+        
+        for k in range(K):
+            print(f"Training adversary ONLY: {k}-th epoch")
+            source_iter = iter(source_train_loader)
+            target_iter = iter(target_train_loader)
+            # if I fit for more 2 epochs, then domain loss gets "stuck" and accuracy stays at 0.5. Predictions look like all 1s or all 0s.
+            # so it's crucial to get into 2-phase training before that happens.
+            steps_per_epoch = steps_per_epoch // 300
+            self.train_adversary(source_train_loader, target_train_loader, iterations=steps_per_epoch)
         
         for self.epoch in range(epochs):
             if self.rank == 0:
@@ -187,52 +204,17 @@ class DANNEngine(ReconstructionEngine):
             source_iter = iter(source_train_loader)
             target_iter = iter(target_train_loader)
 
-            # TODO: turn off gradient computations of parameters for f (main network)
-            # TODO: train r (domain classifier, or adversary) for K iterations.
-            # TODO: use stochastic gradient "ascent" for r, not descent. loss = -log p_r (z | s)
-            K = 5
-            for param in self.model.class_classifier.parameters():
-                param.requires_grad = False
-            for param in self.model.feature_extractor.parameters():
-                param.requires_grad = False
-            for param in self.model.domain_classifier.parameters():
-                param.requires_grad = True
-            
-            for k in range(K):
-                # print(f"Training domain classifier {k}-th epoch")
+            for self.step in range(steps_per_epoch):
+                self.set_requires_grads_for_models(feature_extractor=False, class_classifier=False, domain_classifier=True)
+                
+                r_steps = 2
+                self.train_adversary(source_train_loader, target_train_loader, iterations=r_steps)
+
+                self.set_requires_grads_for_models(feature_extractor=False, class_classifier=False, domain_classifier=False)
+                
                 source_iter = iter(source_train_loader)
                 target_iter = iter(target_train_loader)
-                for step in range(steps_per_epoch // 100):
-                    source_data = next(source_iter)
-                    target_data = next(target_iter)
 
-                    self.source_data = source_data['data'].to(self.device)
-                    self.target_data = target_data['data'].to(self.device)
-                    self.data = torch.cat([self.source_data, self.target_data])
-                    self.target = source_data[self.truth_key].to(self.device)
-
-                    self.optimizer.zero_grad()
-                    features = self.model.feature_extractor(self.data)
-                    reverse_features = features # self.grl(features, alpha=self.epoch / epochs)
-                    domain_output = self.model.domain_classifier(reverse_features)
-                    domain_labels = torch.cat([torch.zeros(len(self.source_data)), torch.ones(len(self.target_data))]).to(self.device)
-                    loss = self.domain_criterion(domain_output, domain_labels.long())
-                    loss.backward()
-                    self.optimizer.step()
-
-            # TODO: turn off gradient computations of parameters for r (adversary)
-            # TODO: with r frozen, update f by SGD of loss = -log p_f (y | x) + lambda * log p_r (z | s)
-            for param in self.model.class_classifier.parameters():
-                param.requires_grad = True
-            for param in self.model.feature_extractor.parameters():
-                param.requires_grad = True
-            for param in self.model.domain_classifier.parameters():
-                param.requires_grad = False
-            
-            source_iter = iter(source_train_loader)
-            target_iter = iter(target_train_loader)
-
-            for self.step in range(steps_per_epoch):
                 source_data = next(source_iter)
                 target_data = next(target_iter)
 
@@ -241,8 +223,8 @@ class DANNEngine(ReconstructionEngine):
                 self.data = torch.cat([self.source_data, self.target_data])
                 self.target = source_data[self.truth_key].to(self.device)
 
-                outputs, metrics = self.forward(True)
-                self.backward()
+                outputs, metrics = self.forward(False)
+                # self.backward()
 
                 self.step += 1
                 self.iteration += 1
@@ -277,7 +259,36 @@ class DANNEngine(ReconstructionEngine):
             log.info(f"Epoch {self.epoch} completed in {datetime.now() - epoch_start_time}")
             log.info(f"Training {epochs} epochs completed in {datetime.now()-start_time}")
             self.val_log.close()
+    
+    def set_requires_grads_for_models(self, feature_extractor: bool, class_classifier: bool, domain_classifier: bool):
+        for param in self.model.class_classifier.parameters():
+            param.requires_grad = class_classifier
+        for param in self.model.feature_extractor.parameters():
+            param.requires_grad = feature_extractor
+        for param in self.model.domain_classifier.parameters():
+            param.requires_grad = domain_classifier
 
+    def train_adversary(self, source_train_loader, target_train_loader, iterations = 2):
+        # print(f"Training domain classifier {k}-th epoch")
+        source_iter = iter(source_train_loader)
+        target_iter = iter(target_train_loader)
+        for step in range(iterations):
+            source_data = next(source_iter)
+            target_data = next(target_iter)
+
+            self.source_data = source_data['data'].to(self.device)
+            self.target_data = target_data['data'].to(self.device)
+            self.data = torch.cat([self.source_data, self.target_data])
+            self.target = source_data[self.truth_key].to(self.device)
+
+            self.optimizer.zero_grad()
+            features = self.model.feature_extractor(self.data)
+            reverse_features = features # self.grl(features, alpha=self.epoch / epochs)
+            domain_output = self.model.domain_classifier(reverse_features)
+            domain_labels = torch.cat([torch.zeros(len(self.source_data)), torch.ones(len(self.target_data))]).to(self.device)
+            loss = self.domain_criterion(domain_output, domain_labels.long())
+            loss.backward()
+            self.optimizer.step()
 
     def validate(self, source_val_iter, target_val_iter, num_val_batches, checkpointing):
         self.model.eval()

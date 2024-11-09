@@ -6,7 +6,7 @@ from watchmal.engine.domain_adaptation import DANNEngine
 
 class DANNClassifierEngine(DANNEngine):
     """Engine for performing training or evaluation for a classification network."""
-    def __init__(self, truth_key, model, rank, gpu, dump_path, label_set=None, pretrained_model_path=None):
+    def __init__(self, truth_key, model, rank, gpu, dump_path, output_center=0, output_scale=1, pretrained_model_path=None):
         """
         Parameters
         ==========
@@ -26,32 +26,32 @@ class DANNClassifierEngine(DANNEngine):
         """
         # create the directory for saving the log and dump files
         super().__init__(truth_key, model, rank, gpu, dump_path, pretrained_model_path)
-        self.softmax = torch.nn.Softmax(dim=1)
-        self.label_set = label_set
+        self.output_center = output_center
+        self.output_scale = output_scale
 
-    def configure_data_loaders(self, data_config, loaders_config, is_distributed, seed):
-        """
-        Set up data loaders from loaders hydra configs for the data config, and a list of data loader configs.
+    # def configure_data_loaders(self, data_config, loaders_config, is_distributed, seed):
+    #     """
+    #     Set up data loaders from loaders hydra configs for the data config, and a list of data loader configs.
 
-        Parameters
-        ==========
-        data_config
-            Hydra config specifying dataset.
-        loaders_config
-            Hydra config specifying a list of dataloaders.
-        is_distributed : bool
-            Whether running in multiprocessing mode.
-        seed : int
-            Random seed to use to initialize dataloaders.
-        """
-        super().configure_data_loaders(data_config, loaders_config, is_distributed, seed)
-        if self.label_set is not None:
-            for name in loaders_config.keys():
-                self.data_loaders[name].dataset.map_labels(self.label_set)
-        # if self.label_set is not None:
-        #     for name in loaders_config.keys():
-        #         if 'target' not in name:
-        #             self.data_loaders[name].dataset.map_labels(self.label_set)
+    #     Parameters
+    #     ==========
+    #     data_config
+    #         Hydra config specifying dataset.
+    #     loaders_config
+    #         Hydra config specifying a list of dataloaders.
+    #     is_distributed : bool
+    #         Whether running in multiprocessing mode.
+    #     seed : int
+    #         Random seed to use to initialize dataloaders.
+    #     """
+    #     super().configure_data_loaders(data_config, loaders_config, is_distributed, seed)
+    #     if self.label_set is not None:
+    #         for name in loaders_config.keys():
+    #             self.data_loaders[name].dataset.map_labels(self.label_set)
+    #     # if self.label_set is not None:
+    #     #     for name in loaders_config.keys():
+    #     #         if 'target' not in name:
+    #     #             self.data_loaders[name].dataset.map_labels(self.label_set)
 
     def forward(self, train=True):
         # features are G_f([x_source, x_target]) == representation of source data and target data (concat)
@@ -61,45 +61,38 @@ class DANNClassifierEngine(DANNEngine):
         
         # DDP version of above code
         features = self.module.feature_extractor(self.data)
-        features.requires_grad_(True)
         features_source = self.module.feature_extractor(self.source_data)
-        features_source.requires_grad_(True)
 
         
         with torch.set_grad_enabled(train):
             class_output = self.module.class_classifier(features_source)
             
-            softmax = self.softmax(class_output)
-            predicted_labels = torch.argmax(class_output, dim=-1)
             lambda_param = 0.3 # self.grl_scheduler.get_lambda()
 
+            model_out = self.grl(features)
+            domain_output = self.module.domain_classifier(model_out)
 
-            reverse_features = self.grl(features)
-            domain_output = self.module.domain_classifier(reverse_features)
-            
-            class_loss = self.criterion(class_output, self.target)
-            class_accuracy = (predicted_labels == self.target).sum() / float(predicted_labels.nelement())
+            scaled_model_out = self.scale_values(model_out).float()
+            scaled_target = self.scale_values(self.target).float()
+            class_loss = self.criterion(scaled_model_out, scaled_target)
             domain_labels = torch.cat([torch.zeros(len(self.source_data)), torch.ones(len(self.target_data))]).to(self.device)
 
             domain_loss = self.domain_criterion(domain_output, domain_labels.long())
             predicted_domains = torch.argmax(domain_output, dim=-1)
-            # print("domain labels", domain_labels)
-            # print("domain output", domain_output)
-            # print("predicted domains", predicted_domains)
             domain_accuracy = (predicted_domains == domain_labels).sum() / float(predicted_domains.nelement())
-            # print("domain accuracy", domain_accuracy)
-
-            # print(domain_output.grad_fn)
             
             self.loss = class_loss - lambda_param * domain_loss
 
-            outputs = {'softmax': softmax}
-            
+            outputs = {"predicted_"+self.truth_key: model_out}
+
             metrics = {
                 'loss': self.loss.item(),
                 'class_loss': class_loss.item(),
-                'class_accuracy': class_accuracy.item(),
                 'domain_loss': domain_loss.item(),
                 'domain_accuracy': domain_accuracy.item(),
             }
         return outputs, metrics
+    
+    def scale_values(self, data):
+        scaled = (data - self.output_center) / self.output_scale
+        return scaled

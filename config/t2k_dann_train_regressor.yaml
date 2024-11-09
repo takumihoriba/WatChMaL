@@ -23,7 +23,7 @@ model:
   feature_extractor:
     _target_: watchmal.model.resnet.resnet34
     num_input_channels: 2
-    num_output_channels: 512  
+    num_output_channels: 3  
     stride: 1
     kernelSize: 1
     dropout_p: 0.
@@ -45,13 +45,13 @@ engine:
   _target_: watchmal.engine.classification_dann.DANNClassifierEngine
   truth_key: 'labels'
   label_set: [0,1,2]
-  # pretrained_model_path: /data/thoriba/t2k/models/14042024-00062_jun17/ClassifierEngine_ResNet_BEST.pth
+  pretrained_model_path: /data/thoriba/t2k/models/14042024-00062_jun17/ClassifierEngine_ResNet_BEST.pth
 
 tasks:
   train:
-    epochs: 10
-    val_interval: 5
-    num_val_batches: 8
+    epochs: 20
+    val_interval: 100
+    num_val_batches: 2
     checkpointing: false
     loss:
       classification:
@@ -107,6 +107,6 @@ tasks:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
 
 gpu_list:
-- 4
+- 2
 seed: null
 dump_path: ./outputs/
