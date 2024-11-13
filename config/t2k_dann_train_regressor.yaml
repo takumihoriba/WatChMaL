@@ -38,7 +38,7 @@ model:
     _target_: watchmal.model.dann.FlexibleNNClassifier
     input_dim: 512  # Should match feature_extractor output
     hidden_dims: [128, 64, 32]  # You can adjust this based on your model architecture
-    output_dim: 2    # Binary classification
+    output_dim: 1    # Binary classification
     dropout_p: 0.2   # Dropout probability
 
 engine:
@@ -57,7 +57,7 @@ tasks:
       classification:
         _target_: torch.nn.CrossEntropyLoss
       domain:
-        _target_: torch.nn.CrossEntropyLoss
+        _target_: torch.nn.BCEWithLogitsLoss
     data_loaders:
       source_train:
         split_key: train_idxs

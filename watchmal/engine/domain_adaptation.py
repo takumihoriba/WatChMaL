@@ -42,6 +42,12 @@ class DANNEngine(ReconstructionEngine):
     def configure_grl_scheduler(self, grl_config):
         self.grl_scheduler = instantiate(grl_config)
 
+    def configure_optimizers(self, optimizer_config):
+        """Instantiate an optimizer from a hydra config."""
+        # self.optimizer = instantiate(optimizer_config, params=self.module.parameters())
+        self.optimizer = instantiate(optimizer_config, params=list(self.model.feature_extractor.parameters()) + list(self.model.class_classifier.parameters()))
+        self.optimizer_adv = instantiate(optimizer_config, params=self.model.domain_classifier.parameters())
+
     # override from ReconstructionEngine to deal with two datasets
     def configure_data_loaders(self, data_config, loaders_config, is_distributed, seed):
         """
@@ -179,14 +185,15 @@ class DANNEngine(ReconstructionEngine):
 
         steps_per_epoch = min(len(source_train_loader), len(target_train_loader))
         
-        for k in range(K):
-            print(f"Training adversary ONLY: {k}-th epoch")
-            source_iter = iter(source_train_loader)
-            target_iter = iter(target_train_loader)
-            # if I fit for more 2 epochs, then domain loss gets "stuck" and accuracy stays at 0.5. Predictions look like all 1s or all 0s.
-            # so it's crucial to get into 2-phase training before that happens.
-            steps_per_epoch = steps_per_epoch // 300
-            self.train_adversary(source_train_loader, target_train_loader, iterations=steps_per_epoch)
+        # for k in range(K):
+        #     print(f"Training adversary ONLY: {k}-th epoch")
+        #     source_iter = iter(source_train_loader)
+        #     target_iter = iter(target_train_loader)
+        #     # if I fit for more 2 epochs, then domain loss gets "stuck" and accuracy stays at 0.5. Predictions look like all 1s or all 0s.
+        #     # so it's crucial to get into 2-phase training before that happens.
+        #     steps_per_epoch = steps_per_epoch 
+        #     self.train_adversary(source_train_loader, target_train_loader, iterations=steps_per_epoch, print_interval=5, print=False)
+
         
         for self.epoch in range(epochs):
             if self.rank == 0:
@@ -208,9 +215,9 @@ class DANNEngine(ReconstructionEngine):
                 self.set_requires_grads_for_models(feature_extractor=False, class_classifier=False, domain_classifier=True)
                 
                 r_steps = 2
-                self.train_adversary(source_train_loader, target_train_loader, iterations=r_steps)
+                # self.train_adversary(source_train_loader, target_train_loader, iterations=r_steps, print_interval=5, print=False)
 
-                self.set_requires_grads_for_models(feature_extractor=False, class_classifier=False, domain_classifier=False)
+                self.set_requires_grads_for_models(feature_extractor=True, class_classifier=True, domain_classifier=False)
                 
                 source_iter = iter(source_train_loader)
                 target_iter = iter(target_train_loader)
@@ -223,8 +230,9 @@ class DANNEngine(ReconstructionEngine):
                 self.data = torch.cat([self.source_data, self.target_data])
                 self.target = source_data[self.truth_key].to(self.device)
 
-                outputs, metrics = self.forward(False)
-                # self.backward()
+                outputs, metrics = self.forward(True)
+                self.backward() # this does 3 thigs: zero_grad, backward, step.
+                
 
                 self.step += 1
                 self.iteration += 1
@@ -268,11 +276,12 @@ class DANNEngine(ReconstructionEngine):
         for param in self.model.domain_classifier.parameters():
             param.requires_grad = domain_classifier
 
-    def train_adversary(self, source_train_loader, target_train_loader, iterations = 2):
+    def train_adversary(self, source_train_loader, target_train_loader, iterations = 2, print_interval=5, print=False):
         # print(f"Training domain classifier {k}-th epoch")
         source_iter = iter(source_train_loader)
         target_iter = iter(target_train_loader)
         for step in range(iterations):
+            self.optimizer_adv.zero_grad()
             source_data = next(source_iter)
             target_data = next(target_iter)
 
@@ -281,14 +290,23 @@ class DANNEngine(ReconstructionEngine):
             self.data = torch.cat([self.source_data, self.target_data])
             self.target = source_data[self.truth_key].to(self.device)
 
-            self.optimizer.zero_grad()
+            
             features = self.model.feature_extractor(self.data)
             reverse_features = features # self.grl(features, alpha=self.epoch / epochs)
             domain_output = self.model.domain_classifier(reverse_features)
             domain_labels = torch.cat([torch.zeros(len(self.source_data)), torch.ones(len(self.target_data))]).to(self.device)
             loss = self.domain_criterion(domain_output, domain_labels.long())
+
+            
             loss.backward()
-            self.optimizer.step()
+            self.optimizer_adv.step()
+
+
+            if step % print_interval == 0 and print:
+                print(f"Iteration {step}, Step {step}")
+                print(f"  Training Loss {loss.item()}")
+                print(f"  Domain output {domain_output}")
+                print(f"  Params {list(self.model.domain_classifier.parameters())[0]}")
 
     def validate(self, source_val_iter, target_val_iter, num_val_batches, checkpointing):
         self.model.eval()
