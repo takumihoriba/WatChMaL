@@ -653,8 +653,8 @@ class CNNDatasetDeadPMT(CNNDataset):
                 print('non-zero chrgs in data (before)', ch_pre)
 
             # kill dead PMTs according to dead PMT IDs
-            # data[0, hit_rows_d, hit_cols_d] = .0
-            # data[1, hit_rows_d, hit_cols_d] = .0
+            data[0, hit_rows_d, hit_cols_d] = .0
+            data[1, hit_rows_d, hit_cols_d] = .0
 
             
             if self.use_positions:
