@@ -4,7 +4,7 @@ import torch
 from watchmal.engine.domain_adaptation import DANNEngine
 
 
-class DANNClassifierEngine(DANNEngine):
+class DANNRegressionEngine(DANNEngine):
     """Engine for performing training or evaluation for a classification network."""
     def __init__(self, truth_key, model, rank, gpu, dump_path, output_center=0, output_scale=1, pretrained_model_path=None):
         """
@@ -29,65 +29,42 @@ class DANNClassifierEngine(DANNEngine):
         self.output_center = output_center
         self.output_scale = output_scale
 
-    # def configure_data_loaders(self, data_config, loaders_config, is_distributed, seed):
-    #     """
-    #     Set up data loaders from loaders hydra configs for the data config, and a list of data loader configs.
-
-    #     Parameters
-    #     ==========
-    #     data_config
-    #         Hydra config specifying dataset.
-    #     loaders_config
-    #         Hydra config specifying a list of dataloaders.
-    #     is_distributed : bool
-    #         Whether running in multiprocessing mode.
-    #     seed : int
-    #         Random seed to use to initialize dataloaders.
-    #     """
-    #     super().configure_data_loaders(data_config, loaders_config, is_distributed, seed)
-    #     if self.label_set is not None:
-    #         for name in loaders_config.keys():
-    #             self.data_loaders[name].dataset.map_labels(self.label_set)
-    #     # if self.label_set is not None:
-    #     #     for name in loaders_config.keys():
-    #     #         if 'target' not in name:
-    #     #             self.data_loaders[name].dataset.map_labels(self.label_set)
-
     def forward(self, train=True):
-        # features are G_f([x_source, x_target]) == representation of source data and target data (concat)
-        # features = self.model.feature_extractor(self.data)
-        # # features from soure data, features from target data
-        # features_source = self.model.feature_extractor(self.source_data)
-        
-        # DDP version of above code
-        features = self.module.feature_extractor(self.data)
-        features_source = self.module.feature_extractor(self.source_data)
+        # training f with GRL
+        label_output, _ = self.module.label_predictor(self.source_data)
 
+        _, features_all = self.module.label_predictor(self.data)
+        features_all = self.module.grl(features_all)
         
         with torch.set_grad_enabled(train):
-            class_output = self.module.class_classifier(features_source)
+     
+            lambda_param = 0.3
+
             
-            lambda_param = 0.3 # self.grl_scheduler.get_lambda()
-
-            model_out = self.grl(features)
-            domain_output = self.module.domain_classifier(model_out)
-
-            scaled_model_out = self.scale_values(model_out).float()
+            # compute f loss (predictor loss) using data from source dataset
+            scaled_label_output = self.scale_values(label_output).float()
             scaled_target = self.scale_values(self.target).float()
-            class_loss = self.criterion(scaled_model_out, scaled_target)
+            f_loss = self.criterion(scaled_label_output, scaled_target)
+            
+            # compute r loss (domain loss) using data from both source and target datasets
+            domain_output = self.module.domain_classifier(features_all)
+            # print('domain_output', domain_output)
             domain_labels = torch.cat([torch.zeros(len(self.source_data)), torch.ones(len(self.target_data))]).to(self.device)
-
-            domain_loss = self.domain_criterion(domain_output, domain_labels.long())
-            predicted_domains = torch.argmax(domain_output, dim=-1)
+            domain_labels = domain_labels.view(-1, 1).float()    
+            domain_loss = self.domain_criterion(domain_output, domain_labels)
+            
+            # predicted_domains = torch.argmax(domain_output, dim=-1)
+            predicted_domains = (domain_output > 0).float()
             domain_accuracy = (predicted_domains == domain_labels).sum() / float(predicted_domains.nelement())
             
-            self.loss = class_loss - lambda_param * domain_loss
+            # print("predicted_domains", predicted_domains)
+            # print("domain acc from forward", domain_accuracy)
 
-            outputs = {"predicted_"+self.truth_key: model_out}
-
+            self.loss = f_loss - lambda_param * domain_loss
+            outputs = {"predicted_"+self.truth_key: label_output}
             metrics = {
                 'loss': self.loss.item(),
-                'class_loss': class_loss.item(),
+                'class_loss': f_loss.item(),
                 'domain_loss': domain_loss.item(),
                 'domain_accuracy': domain_accuracy.item(),
             }

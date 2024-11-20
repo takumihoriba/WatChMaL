@@ -1,23 +1,17 @@
+import torch
 import torch.nn as nn
-from torch.autograd import Function
 import torch.nn.functional as F
 
-class GradientReversalLayer(Function):
+class GradientReversalLayer(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x, alpha):
         ctx.alpha = alpha
-        # clone or view as
-        # return x.clone()
-        # return x.view_as(x)
-        return x * 1.0
+        return x.view_as(x)
 
     @staticmethod
     def backward(ctx, grad_output):
-        
-        # print("GRL applied (backward path)")
-        # removed * ctx.alpha
-        return grad_output.neg() * ctx.alpha , None
-    
+        return grad_output.neg() * ctx.alpha, None
+
 class GradientReversalLayerModule(nn.Module):
     def __init__(self, lambda_grad=1.0):
         super(GradientReversalLayerModule, self).__init__()
@@ -27,42 +21,35 @@ class GradientReversalLayerModule(nn.Module):
         return GradientReversalLayer.apply(x, self.lambda_grad)
 
 class DANNModel(nn.Module):
-    def __init__(self, feature_extractor, class_classifier, domain_classifier):
+    def __init__(self, label_predictor, domain_classifier):
         super(DANNModel, self).__init__()
-        self.feature_extractor = feature_extractor
-        self.class_classifier = class_classifier
+        self.label_predictor = label_predictor
         self.domain_classifier = nn.Sequential(
             domain_classifier
-            # ,nn.Flatten(0, -1)  # This will flatten the output to 1D
         )
         self.grl = GradientReversalLayerModule()
 
-    def forward(self, x, alpha=0):
-        features = self.feature_extractor(x)
-        class_output = self.class_classifier(features)
-        reverse_features = self.grl(features)
+    def forward(self, x, alpha=0, apply_grl=True):
+        label_output, features = self.label_predictor(x)
+        if apply_grl:
+            reverse_features = self.grl(features)
+        else:
+            reverse_features = features
         domain_output = self.domain_classifier(reverse_features)
-        return (class_output, domain_output)
+        return (label_output, domain_output)
 
-class SimpleNNClassifier(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim=2, dropout_p=0.5):
-        super(SimpleNNClassifier, self).__init__()
-        
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.dropout = nn.Dropout(dropout_p)
-        self.batch_norm = nn.BatchNorm1d(hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, output_dim)
-        
+class LabelPredictor(nn.Module):
+    def __init__(self, feature_extractor, label_pred):
+        super(LabelPredictor, self).__init__()
+        self.feature_extractor = feature_extractor
+        self.label_predictor = label_pred
+
     def forward(self, x):
-        x = self.fc1(x)
-        x = self.batch_norm(x)
-        x = F.relu(x)
-        x = self.dropout(x)
-        x = self.fc2(x)
-        
-        return x
-    
-    
+        features = self.feature_extractor(x)
+        label_output = self.label_predictor(features)
+        return label_output, features
+
+
 class FlexibleNNClassifier(nn.Module):
     def __init__(self, input_dim, hidden_dims, output_dim=2, dropout_p=0.2):
         """
@@ -98,19 +85,11 @@ class FlexibleNNClassifier(nn.Module):
         
     def forward(self, x):
         return self.model(x)
-    
-
-class PreTrainedFeatureExtractor(nn.Module):
-    def __init__(self, pretrained_model):
-        super(PreTrainedFeatureExtractor, self).__init__()
 
 
-        self.base_model = pretrained_model
-        
-        # Remove the last fully connected layer
-        # For ResNet, this is typically `fc`
-        self.base_model.fc = nn.Identity()  # Replace with an identity function
 
-    def forward(self, x):
-        # Forward pass through the feature extractor
-        return self.base_model(x)
+
+def print_gradients(model):
+    for name, param in model.named_parameters():
+        if param.grad is not None:
+            print(f"{name}: {param.grad.norm()}")

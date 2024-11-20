@@ -15,31 +15,32 @@ data:
       pmt_positions_file: '/fast_scratch/WatChMaL/data/T2K/image_files/skdetsim_imagefile.npy'
       channel_scaling:
         time: [400, 1000]
-      dead_pmt_rate: 0.1
+      dead_pmt_rate: 0.2
       dead_pmt_seed: 42  
 
 model:
   _target_: watchmal.model.dann.DANNModel
-  feature_extractor:
-    _target_: watchmal.model.resnet.resnet34
-    num_input_channels: 2
-    num_output_channels: 512  
-    stride: 1
-    kernelSize: 1
-    dropout_p: 0.
-
-  class_classifier:
-    _target_: watchmal.model.dann.FlexibleNNClassifier
-    input_dim: 512   # Should match feature_extractor output
-    hidden_dims: [128, 64]  # You can adjust this based on your model architecture
-    output_dim: 3    # Number of classes
-    dropout_p: 0.2   # Dropout probability
+  label_predictor:
+    _target_: watchmal.model.dann.LabelPredictor
+    feature_extractor:
+      _target_: watchmal.model.resnet.resnet34
+      num_input_channels: 2
+      num_output_channels: 3 
+      stride: 1
+      kernelSize: 1
+      dropout_p: 0.
+    label_pred:
+      _target_: watchmal.model.dann.FlexibleNNClassifier
+      input_dim: 512  # Should match feature_extractor output
+      hidden_dims: [64]  
+      output_dim: 3    
+      dropout_p: 0.2
   domain_classifier:
     _target_: watchmal.model.dann.FlexibleNNClassifier
     input_dim: 512  # Should match feature_extractor output
-    hidden_dims: [128, 64, 32]  # You can adjust this based on your model architecture
-    output_dim: 2    # Binary classification
-    dropout_p: 0.2   # Dropout probability
+    hidden_dims: [128, 64, 32]  
+    output_dim: 2    
+    dropout_p: 0.2   
 
 engine:
   _target_: watchmal.engine.classification_dann.DANNClassifierEngine
@@ -85,7 +86,7 @@ tasks:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
     optimizers:
       _target_: torch.optim.Adam
-      lr: 0.0005
+      lr: 0.005
       weight_decay: 0
     scheduler:
       _target_: torch.optim.lr_scheduler.ExponentialLR
@@ -107,6 +108,6 @@ tasks:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
 
 gpu_list:
-- 5
+- 2
 seed: null
 dump_path: ./outputs/

@@ -28,15 +28,14 @@ class DANNEngine(ReconstructionEngine):
         super().__init__(truth_key, model, rank, gpu, dump_path)
         self.grl = GradientReversalLayerModule()
         self.domain_criterion = None
-        # self.grl_scheduler = None
-        # define simplest grl scheduler here
         self.grl_scheduler = lambda step=0: 1.0
         self.pretrained_model_path = pretrained_model_path
 
+        self.train_adv_log = CSVLog(self.dump_path + f"log_train_adv_{self.rank}.csv")
+        self.val_adv_log = CSVLog(self.dump_path + "log_val_adv.csv")
+
     def configure_loss(self, loss_config):
-        # criterion is loss for classification/regression
         self.criterion = instantiate(loss_config['classification'])
-        # domain prediction
         self.domain_criterion = instantiate(loss_config['domain'])
 
     def configure_grl_scheduler(self, grl_config):
@@ -45,8 +44,8 @@ class DANNEngine(ReconstructionEngine):
     def configure_optimizers(self, optimizer_config):
         """Instantiate an optimizer from a hydra config."""
         # self.optimizer = instantiate(optimizer_config, params=self.module.parameters())
-        self.optimizer = instantiate(optimizer_config, params=list(self.model.feature_extractor.parameters()) + list(self.model.class_classifier.parameters()))
-        self.optimizer_adv = instantiate(optimizer_config, params=self.model.domain_classifier.parameters())
+        self.optimizer = instantiate(optimizer_config, params=self.module.label_predictor.parameters())
+        self.optimizer_adv = instantiate(optimizer_config, params=self.module.domain_classifier.parameters())
 
     # override from ReconstructionEngine to deal with two datasets
     def configure_data_loaders(self, data_config, loaders_config, is_distributed, seed):
@@ -66,12 +65,9 @@ class DANNEngine(ReconstructionEngine):
         """
         
         for data_name, data_config_item in data_config.items():
-            print('data_name', data_name)
             for loader_name, loader_config in loaders_config.items():
-                print('loader_name', loader_name)
-                # here name is source_train, source_validation, target_train, target_validation
                 if data_name in loader_name:
-                    # want to feed config for source data marked by `source` under data
+                    print(f"Creating dataloader for {loader_name} with config {data_config_item}")
                     self.data_loaders[loader_name] = get_data_loader(**data_config_item, **loader_config, is_distributed=is_distributed, seed=seed)
                 
     def get_synchronized_metrics(self, metric_dict):
@@ -107,15 +103,16 @@ class DANNEngine(ReconstructionEngine):
             
             state_dict = checkpoint['state_dict']
             print("pretrained: ", state_dict.keys())
-            print("new model:  ", self.model.feature_extractor.state_dict().keys())
+            print("new model:  ", self.model.label_predictor.state_dict().keys())
             state_dict = {k.replace('feature_extractor.', ''): v for k, v in state_dict.items()}
             state_dict.pop("fc.weight", None)
             state_dict.pop("fc.bias", None)
 
-            self.model.feature_extractor.load_state_dict(state_dict, strict=False)
-            self.model.feature_extractor.fc = nn.Identity()
+            self.model.label_predictor.feature_extractor.load_state_dict(state_dict, strict=False)
+            self.model.label_predictor.feature_extractor.fc = nn.Identity()
             log.info(f"Loaded pretrained model from {self.pretrained_model_path}")
 
+    # USUALLY, foward() in regression_dann.py or classification_dann.py is called.
     def forward(self, train=True):
         features = self.model.feature_extractor(self.data)
         features_source = self.model.feature_extractor(self.source_data)
@@ -177,22 +174,20 @@ class DANNEngine(ReconstructionEngine):
         epoch_start_time = start_time
 
         # initial training of adversary (just adversary)
-        K = 2
+        K = 5
         if self.pretrained_model_path is None:
             K = 0
         
-        self.set_requires_grads_for_models(feature_extractor=False, class_classifier=False, domain_classifier=True)
+        self.set_requires_grads_for_models(False, True)
 
         steps_per_epoch = min(len(source_train_loader), len(target_train_loader))
         
-        # for k in range(K):
-        #     print(f"Training adversary ONLY: {k}-th epoch")
-        #     source_iter = iter(source_train_loader)
-        #     target_iter = iter(target_train_loader)
-        #     # if I fit for more 2 epochs, then domain loss gets "stuck" and accuracy stays at 0.5. Predictions look like all 1s or all 0s.
-        #     # so it's crucial to get into 2-phase training before that happens.
-        #     steps_per_epoch = steps_per_epoch 
-        #     self.train_adversary(source_train_loader, target_train_loader, iterations=steps_per_epoch, print_interval=5, print=False)
+        for k in range(K):
+            print(f"Training adversary ONLY: {k}-th epoch")
+            source_iter = iter(source_train_loader)
+            target_iter = iter(target_train_loader)
+            steps_per_epoch = steps_per_epoch 
+            self.train_adversary(source_train_loader, target_train_loader, iterations=steps_per_epoch, print_interval=5, print_flag=False)
 
         
         for self.epoch in range(epochs):
@@ -212,12 +207,12 @@ class DANNEngine(ReconstructionEngine):
             target_iter = iter(target_train_loader)
 
             for self.step in range(steps_per_epoch):
-                self.set_requires_grads_for_models(feature_extractor=False, class_classifier=False, domain_classifier=True)
+                self.set_requires_grads_for_models(False, True)
                 
                 r_steps = 2
-                # self.train_adversary(source_train_loader, target_train_loader, iterations=r_steps, print_interval=5, print=False)
+                self.train_adversary(source_train_loader, target_train_loader, iterations=r_steps, print_interval=5, print_flag=True)
 
-                self.set_requires_grads_for_models(feature_extractor=True, class_classifier=True, domain_classifier=False)
+                self.set_requires_grads_for_models(True, False)
                 
                 source_iter = iter(source_train_loader)
                 target_iter = iter(target_train_loader)
@@ -233,7 +228,6 @@ class DANNEngine(ReconstructionEngine):
                 outputs, metrics = self.forward(True)
                 self.backward() # this does 3 thigs: zero_grad, backward, step.
                 
-
                 self.step += 1
                 self.iteration += 1
 
@@ -268,45 +262,55 @@ class DANNEngine(ReconstructionEngine):
             log.info(f"Training {epochs} epochs completed in {datetime.now()-start_time}")
             self.val_log.close()
     
-    def set_requires_grads_for_models(self, feature_extractor: bool, class_classifier: bool, domain_classifier: bool):
-        for param in self.model.class_classifier.parameters():
-            param.requires_grad = class_classifier
-        for param in self.model.feature_extractor.parameters():
-            param.requires_grad = feature_extractor
+    def set_requires_grads_for_models(self, is_train_f: bool, is_train_r: bool):
+        for param in self.model.label_predictor.parameters():
+            param.requires_grad = is_train_f
         for param in self.model.domain_classifier.parameters():
-            param.requires_grad = domain_classifier
+            param.requires_grad = is_train_r
 
-    def train_adversary(self, source_train_loader, target_train_loader, iterations = 2, print_interval=5, print=False):
+    def train_adversary(self, source_train_loader, target_train_loader, iterations = 2, print_interval=5, print_flag=False):
         # print(f"Training domain classifier {k}-th epoch")
         source_iter = iter(source_train_loader)
         target_iter = iter(target_train_loader)
+        
         for step in range(iterations):
             self.optimizer_adv.zero_grad()
             source_data = next(source_iter)
             target_data = next(target_iter)
+
+            if False:
+                # REQUIRES: dataloaders to have SequentialSampler
+                print("Source data sample:", source_data['data'][1])
+                print("Target data sample:", target_data['data'][1])
+                difference = source_data['data'][1] - target_data['data'][1]
+                print("Difference:", difference)
+                print("difference magnitude:", difference.norm())
 
             self.source_data = source_data['data'].to(self.device)
             self.target_data = target_data['data'].to(self.device)
             self.data = torch.cat([self.source_data, self.target_data])
             self.target = source_data[self.truth_key].to(self.device)
 
-            
-            features = self.model.feature_extractor(self.data)
-            reverse_features = features # self.grl(features, alpha=self.epoch / epochs)
-            domain_output = self.model.domain_classifier(reverse_features)
+            _, domain_output = self.model(self.data, apply_grl=False)
             domain_labels = torch.cat([torch.zeros(len(self.source_data)), torch.ones(len(self.target_data))]).to(self.device)
-            loss = self.domain_criterion(domain_output, domain_labels.long())
-
             
+            domain_labels = domain_labels.view(-1, 1).float()
+            
+            loss = self.domain_criterion(domain_output, domain_labels)
+
             loss.backward()
             self.optimizer_adv.step()
 
+            log_entries = {"iteration": step, "epoch": self.epoch, "domain_loss": loss.item()}
+            self.train_adv_log.log(log_entries)
 
-            if step % print_interval == 0 and print:
+
+            if step % print_interval == 0 and print_flag:
                 print(f"Iteration {step}, Step {step}")
                 print(f"  Training Loss {loss.item()}")
-                print(f"  Domain output {domain_output}")
-                print(f"  Params {list(self.model.domain_classifier.parameters())[0]}")
+                # print(f"  Domain output {domain_output}")
+                # print(f"  Params {list(self.model.domain_classifier.parameters())[0]}")
+                # print_gradients(self.model.domain_classifier)
 
     def validate(self, source_val_iter, target_val_iter, num_val_batches, checkpointing):
         self.model.eval()
@@ -364,3 +368,8 @@ class DANNEngine(ReconstructionEngine):
             self.val_log.log(log_entries)
 
         self.model.train()
+
+def print_gradients(model):
+    for name, param in model.named_parameters():
+        if param.grad is not None:
+            print(f"{name}: {param.grad.norm()}")

@@ -48,18 +48,8 @@ class DANNClassifierEngine(DANNEngine):
         if self.label_set is not None:
             for name in loaders_config.keys():
                 self.data_loaders[name].dataset.map_labels(self.label_set)
-        # if self.label_set is not None:
-        #     for name in loaders_config.keys():
-        #         if 'target' not in name:
-        #             self.data_loaders[name].dataset.map_labels(self.label_set)
 
     def forward(self, train=True):
-        # features are G_f([x_source, x_target]) == representation of source data and target data (concat)
-        # features = self.model.feature_extractor(self.data)
-        # # features from soure data, features from target data
-        # features_source = self.model.feature_extractor(self.source_data)
-        
-        # DDP version of above code
         features = self.module.feature_extractor(self.data)
         features.requires_grad_(True)
         features_source = self.module.feature_extractor(self.source_data)
@@ -72,7 +62,6 @@ class DANNClassifierEngine(DANNEngine):
             softmax = self.softmax(class_output)
             predicted_labels = torch.argmax(class_output, dim=-1)
             lambda_param = 0.3 # self.grl_scheduler.get_lambda()
-
 
             reverse_features = self.grl(features)
             domain_output = self.module.domain_classifier(reverse_features)
