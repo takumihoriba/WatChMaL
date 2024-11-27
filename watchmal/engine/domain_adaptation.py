@@ -24,12 +24,14 @@ from watchmal.utils.logging_utils import CSVLog
 log = logging.getLogger(__name__)
 
 class DANNEngine(ReconstructionEngine):
-    def __init__(self, truth_key, model, rank, gpu, dump_path, pretrained_model_path=None):
+    def __init__(self, truth_key, model, rank, gpu, dump_path, pretrained_model_path=None, domain_pre_train_epochs=2, domain_in_train_itrs=2):
         super().__init__(truth_key, model, rank, gpu, dump_path)
         self.grl = GradientReversalLayerModule()
         self.domain_criterion = None
         self.grl_scheduler = lambda step=0: 1.0
         self.pretrained_model_path = pretrained_model_path
+        self.domain_pre_train_epochs_k = domain_pre_train_epochs
+        self.domain_in_train_itrs_r = domain_in_train_itrs
 
         self.train_adv_log = CSVLog(self.dump_path + f"log_train_adv_{self.rank}.csv")
         self.val_adv_log = CSVLog(self.dump_path + "log_val_adv.csv")
@@ -161,6 +163,8 @@ class DANNEngine(ReconstructionEngine):
         self.iteration = 0
         self.step = 0
         self.best_validation_loss = np.inf
+
+        self.cum_itr_adv = 0
         
         source_train_loader = self.data_loaders["source_train"]
         target_train_loader = self.data_loaders["target_train"]
@@ -172,24 +176,22 @@ class DANNEngine(ReconstructionEngine):
         start_time = datetime.now()
         step_time = start_time
         epoch_start_time = start_time
-
-        # initial training of adversary (just adversary)
-        K = 5
-        if self.pretrained_model_path is None:
-            K = 0
         
         self.set_requires_grads_for_models(False, True)
-
         steps_per_epoch = min(len(source_train_loader), len(target_train_loader))
         
-        for k in range(K):
+        for k in range(self.domain_pre_train_epochs_k):
             print(f"Training adversary ONLY: {k}-th epoch")
             source_iter = iter(source_train_loader)
             target_iter = iter(target_train_loader)
             steps_per_epoch = steps_per_epoch 
-            self.train_adversary(source_train_loader, target_train_loader, iterations=steps_per_epoch, print_interval=5, print_flag=False)
+            self.train_adversary(source_train_loader, target_train_loader,
+                                 iterations=steps_per_epoch,
+                                 print_interval=5, print_flag=False)
 
         
+        train_f = True
+
         for self.epoch in range(epochs):
             if self.rank == 0:
                 if self.epoch > 0:
@@ -209,10 +211,17 @@ class DANNEngine(ReconstructionEngine):
             for self.step in range(steps_per_epoch):
                 self.set_requires_grads_for_models(False, True)
                 
-                r_steps = 2
-                self.train_adversary(source_train_loader, target_train_loader, iterations=r_steps, print_interval=5, print_flag=True)
+                r_steps = self.domain_in_train_itrs_r
+                self.train_adversary(source_train_loader, target_train_loader,
+                                     iterations=r_steps,
+                                     print_interval=5, print_flag=False)
 
                 self.set_requires_grads_for_models(True, False)
+
+                if not train_f:
+                    self.set_requires_grads_for_models(False, False)
+
+                
                 
                 source_iter = iter(source_train_loader)
                 target_iter = iter(target_train_loader)
@@ -222,11 +231,21 @@ class DANNEngine(ReconstructionEngine):
 
                 self.source_data = source_data['data'].to(self.device)
                 self.target_data = target_data['data'].to(self.device)
+                # TODO: pretty confusing this here.
+                # data is from two datasets
                 self.data = torch.cat([self.source_data, self.target_data])
+                # target is from source dataset only.
                 self.target = source_data[self.truth_key].to(self.device)
 
-                outputs, metrics = self.forward(True)
-                self.backward() # this does 3 thigs: zero_grad, backward, step.
+
+                # if self.step < 10:
+                #     # TODO: training
+                outputs, metrics = self.forward(train_f)
+                if train_f:
+                    self.backward()
+                # else:
+                #     # TODO: NO training
+                #     outputs, metrics = self.forward(False)
                 
                 self.step += 1
                 self.iteration += 1
@@ -301,13 +320,15 @@ class DANNEngine(ReconstructionEngine):
             loss.backward()
             self.optimizer_adv.step()
 
-            log_entries = {"iteration": step, "epoch": self.epoch, "domain_loss": loss.item()}
+            log_entries = {"iteration": self.cum_itr_adv, "epoch_main": self.epoch, "domain_loss": loss.item()}
             self.train_adv_log.log(log_entries)
+
+            self.cum_itr_adv += 1
 
 
             if step % print_interval == 0 and print_flag:
                 print(f"Iteration {step}, Step {step}")
-                print(f"  Training Loss {loss.item()}")
+                print(f"  Training Loss (adversary ONLY) {loss.item()}")
                 # print(f"  Domain output {domain_output}")
                 # print(f"  Params {list(self.model.domain_classifier.parameters())[0]}")
                 # print_gradients(self.model.domain_classifier)

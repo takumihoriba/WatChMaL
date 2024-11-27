@@ -50,28 +50,30 @@ class DANNClassifierEngine(DANNEngine):
                 self.data_loaders[name].dataset.map_labels(self.label_set)
 
     def forward(self, train=True):
-        features = self.module.feature_extractor(self.data)
+        features = self.module.label_predictor.feature_extractor(self.data)
         features.requires_grad_(True)
-        features_source = self.module.feature_extractor(self.source_data)
-        features_source.requires_grad_(True)
 
-        
+
         with torch.set_grad_enabled(train):
-            class_output = self.module.class_classifier(features_source)
-            
+            # class loss
+            class_output, features_source = self.module.label_predictor(self.source_data)
+            features_source.requires_grad_(True)
+            class_loss = self.criterion(class_output, self.target)
+
+            # class accuracy
             softmax = self.softmax(class_output)
             predicted_labels = torch.argmax(class_output, dim=-1)
-            lambda_param = 0.3 # self.grl_scheduler.get_lambda()
-
-            reverse_features = self.grl(features)
-            domain_output = self.module.domain_classifier(reverse_features)
-            
-            class_loss = self.criterion(class_output, self.target)
             class_accuracy = (predicted_labels == self.target).sum() / float(predicted_labels.nelement())
-            domain_labels = torch.cat([torch.zeros(len(self.source_data)), torch.ones(len(self.target_data))]).to(self.device)
 
-            domain_loss = self.domain_criterion(domain_output, domain_labels.long())
-            predicted_domains = torch.argmax(domain_output, dim=-1)
+            # domain loss
+            reverse_features = self.grl(features)
+            domain_output = self.module.domain_classifier(reverse_features)            
+            domain_labels = torch.cat([torch.zeros(len(self.source_data)), torch.ones(len(self.target_data))]).to(self.device)
+            domain_labels = domain_labels.view(-1, 1).float()
+            domain_loss = self.domain_criterion(domain_output, domain_labels)
+
+            # domain accuracy
+            predicted_domains = (domain_output > 0).float() 
             # print("domain labels", domain_labels)
             # print("domain output", domain_output)
             # print("predicted domains", predicted_domains)
@@ -79,7 +81,9 @@ class DANNClassifierEngine(DANNEngine):
             # print("domain accuracy", domain_accuracy)
 
             # print(domain_output.grad_fn)
-            
+
+            # total loss
+            lambda_param = 1
             self.loss = class_loss - lambda_param * domain_loss
 
             outputs = {'softmax': softmax}

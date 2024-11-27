@@ -15,7 +15,7 @@ data:
       pmt_positions_file: '/fast_scratch/WatChMaL/data/T2K/image_files/skdetsim_imagefile.npy'
       channel_scaling:
         time: [400, 1000]
-      dead_pmt_rate: 0.2
+      dead_pmt_rate: 0.1
       dead_pmt_seed: 42  
 
 model:
@@ -39,7 +39,7 @@ model:
     _target_: watchmal.model.dann.FlexibleNNClassifier
     input_dim: 512  # Should match feature_extractor output
     hidden_dims: [128, 64, 32]  
-    output_dim: 2    
+    output_dim: 1
     dropout_p: 0.2   
 
 engine:
@@ -50,15 +50,15 @@ engine:
 
 tasks:
   train:
-    epochs: 10
-    val_interval: 50
-    num_val_batches: 8
+    epochs: 50
+    val_interval: 25
+    num_val_batches: 16
     checkpointing: false
     loss:
       classification:
         _target_: torch.nn.CrossEntropyLoss
       domain:
-        _target_: torch.nn.CrossEntropyLoss
+        _target_: torch.nn.BCEWithLogitsLoss
     data_loaders:
       source_train:
         split_key: train_idxs
