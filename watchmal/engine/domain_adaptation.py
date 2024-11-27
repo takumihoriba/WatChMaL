@@ -237,15 +237,9 @@ class DANNEngine(ReconstructionEngine):
                 # target is from source dataset only.
                 self.target = source_data[self.truth_key].to(self.device)
 
-
-                # if self.step < 10:
-                #     # TODO: training
                 outputs, metrics = self.forward(train_f)
                 if train_f:
                     self.backward()
-                # else:
-                #     # TODO: NO training
-                #     outputs, metrics = self.forward(False)
                 
                 self.step += 1
                 self.iteration += 1
@@ -293,7 +287,6 @@ class DANNEngine(ReconstructionEngine):
         target_iter = iter(target_train_loader)
         
         for step in range(iterations):
-            self.optimizer_adv.zero_grad()
             source_data = next(source_iter)
             target_data = next(target_iter)
 
@@ -315,12 +308,13 @@ class DANNEngine(ReconstructionEngine):
             
             domain_labels = domain_labels.view(-1, 1).float()
             
-            loss = self.domain_criterion(domain_output, domain_labels)
+            domain_loss = self.domain_criterion(domain_output, domain_labels)
 
-            loss.backward()
+            self.optimizer_adv.zero_grad()
+            domain_loss.backward()
             self.optimizer_adv.step()
 
-            log_entries = {"iteration": self.cum_itr_adv, "epoch_main": self.epoch, "domain_loss": loss.item()}
+            log_entries = {"iteration": self.cum_itr_adv, "epoch_main": self.epoch, "domain_loss": domain_loss.item()}
             self.train_adv_log.log(log_entries)
 
             self.cum_itr_adv += 1
@@ -328,7 +322,7 @@ class DANNEngine(ReconstructionEngine):
 
             if step % print_interval == 0 and print_flag:
                 print(f"Iteration {step}, Step {step}")
-                print(f"  Training Loss (adversary ONLY) {loss.item()}")
+                print(f"  Training Loss (adversary ONLY) {domain_loss.item()}")
                 # print(f"  Domain output {domain_output}")
                 # print(f"  Params {list(self.model.domain_classifier.parameters())[0]}")
                 # print_gradients(self.model.domain_classifier)
