@@ -6,7 +6,7 @@ from watchmal.engine.domain_adaptation import DANNEngine
 
 class DANNClassifierEngine(DANNEngine):
     """Engine for performing training or evaluation for a classification network."""
-    def __init__(self, truth_key, model, rank, gpu, dump_path, label_set=None, pretrained_model_path=None):
+    def __init__(self, truth_key, model, rank, gpu, dump_path, label_set=None, pretrained_model_path=None, domain_pre_train_epochs=2, domain_in_train_itrs=2):
         """
         Parameters
         ==========
@@ -25,7 +25,7 @@ class DANNClassifierEngine(DANNEngine):
             0 to N).
         """
         # create the directory for saving the log and dump files
-        super().__init__(truth_key, model, rank, gpu, dump_path, pretrained_model_path)
+        super().__init__(truth_key, model, rank, gpu, dump_path, pretrained_model_path, domain_pre_train_epochs, domain_in_train_itrs)
         self.softmax = torch.nn.Softmax(dim=1)
         self.label_set = label_set
 
@@ -50,7 +50,7 @@ class DANNClassifierEngine(DANNEngine):
                 self.data_loaders[name].dataset.map_labels(self.label_set)
 
     def forward(self, train=True):
-        features = self.module.label_predictor.feature_extractor(self.data)
+        _, features = self.module.label_predictor(self.data)
         features.requires_grad_(True)
 
 
