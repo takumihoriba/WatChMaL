@@ -46,8 +46,8 @@ class DANNEngine(ReconstructionEngine):
     def configure_optimizers(self, optimizer_config):
         """Instantiate an optimizer from a hydra config."""
         # self.optimizer = instantiate(optimizer_config, params=self.module.parameters())
-        self.optimizer = instantiate(optimizer_config, params=self.module.label_predictor.parameters())
-        self.optimizer_adv = instantiate(optimizer_config, params=self.module.domain_classifier.parameters())
+        self.optimizer = instantiate(optimizer_config['label_predictor'], params=self.module.label_predictor.parameters())
+        self.optimizer_adv = instantiate(optimizer_config['domain_classifier'], params=self.module.domain_classifier.parameters())
 
     # override from ReconstructionEngine to deal with two datasets
     def configure_data_loaders(self, data_config, loaders_config, is_distributed, seed):

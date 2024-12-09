@@ -87,9 +87,14 @@ tasks:
         sampler:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
     optimizers:
-      _target_: torch.optim.Adam
-      lr: 0.005
-      weight_decay: 0
+      label_predictor:
+        _target_: torch.optim.Adam
+        lr: 0.01
+        weight_decay: 0
+      domain_classifier:
+        _target_: torch.optim.Adam
+        lr: 0.005
+        weight_decay: 0
     scheduler:
       _target_: torch.optim.lr_scheduler.ExponentialLR
       gamma: 0.8
