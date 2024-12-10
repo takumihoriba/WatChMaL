@@ -6,7 +6,9 @@ from watchmal.engine.domain_adaptation import DANNEngine
 
 class DANNClassifierEngine(DANNEngine):
     """Engine for performing training or evaluation for a classification network."""
-    def __init__(self, truth_key, model, rank, gpu, dump_path, label_set=None, pretrained_model_path=None, domain_pre_train_epochs=2, domain_in_train_itrs=2):
+    def __init__(self, truth_key, model, rank, gpu, dump_path, label_set=None,
+                 pretrained_model_path=None, domain_pre_train_epochs=2, domain_in_train_itrs=2,
+                 max_lammy=1.0):
         """
         Parameters
         ==========
@@ -25,7 +27,9 @@ class DANNClassifierEngine(DANNEngine):
             0 to N).
         """
         # create the directory for saving the log and dump files
-        super().__init__(truth_key, model, rank, gpu, dump_path, pretrained_model_path, domain_pre_train_epochs, domain_in_train_itrs)
+        super().__init__(truth_key, model, rank, gpu, dump_path,
+                         pretrained_model_path, domain_pre_train_epochs,
+                           domain_in_train_itrs, max_lammy)
         self.softmax = torch.nn.Softmax(dim=1)
         self.label_set = label_set
 
@@ -83,8 +87,8 @@ class DANNClassifierEngine(DANNEngine):
             # print(domain_output.grad_fn)
 
             # total loss
-            lambda_param = 1
-            self.loss = class_loss - lambda_param * domain_loss
+            lammy = self.max_lammy * min(1.0, max(0.7, (self.epoch+1) / self.total_epochs))
+            self.loss = class_loss - lammy * domain_loss
 
             outputs = {'softmax': softmax}
             
@@ -94,5 +98,6 @@ class DANNClassifierEngine(DANNEngine):
                 'class_accuracy': class_accuracy.item(),
                 'domain_loss': domain_loss.item(),
                 'domain_accuracy': domain_accuracy.item(),
+                'lambda': lammy
             }
         return outputs, metrics

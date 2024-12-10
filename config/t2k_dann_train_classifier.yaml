@@ -48,7 +48,8 @@ engine:
   label_set: [0,1,2]
   pretrained_model_path: /data/thoriba/t2k/models/14042024-00062_jun17/ClassifierEngine_ResNet_BEST.pth
   domain_pre_train_epochs: 0
-  domain_in_train_itrs: 2
+  domain_in_train_itrs: 1
+  max_lammy: 1.5
 
 tasks:
   train:
@@ -115,6 +116,6 @@ tasks:
           _target_: torch.utils.data.sampler.SubsetRandomSampler
 
 gpu_list:
-- 1
+- 4
 seed: null
 dump_path: ./outputs/

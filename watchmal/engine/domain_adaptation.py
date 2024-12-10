@@ -24,7 +24,8 @@ from watchmal.utils.logging_utils import CSVLog
 log = logging.getLogger(__name__)
 
 class DANNEngine(ReconstructionEngine):
-    def __init__(self, truth_key, model, rank, gpu, dump_path, pretrained_model_path=None, domain_pre_train_epochs=2, domain_in_train_itrs=2):
+    def __init__(self, truth_key, model, rank, gpu, dump_path,
+                 pretrained_model_path=None, domain_pre_train_epochs=2, domain_in_train_itrs=2, max_lammy=1.0):
         super().__init__(truth_key, model, rank, gpu, dump_path)
         self.grl = GradientReversalLayerModule()
         self.domain_criterion = None
@@ -32,6 +33,7 @@ class DANNEngine(ReconstructionEngine):
         self.pretrained_model_path = pretrained_model_path
         self.domain_pre_train_epochs_k = domain_pre_train_epochs
         self.domain_in_train_itrs_r = domain_in_train_itrs
+        self.max_lammy = max_lammy
 
         self.train_adv_log = CSVLog(self.dump_path + f"log_train_adv_{self.rank}.csv")
         self.val_adv_log = CSVLog(self.dump_path + "log_val_adv.csv")
@@ -163,6 +165,7 @@ class DANNEngine(ReconstructionEngine):
         self.iteration = 0
         self.step = 0
         self.best_validation_loss = np.inf
+        self.total_epochs = epochs
 
         self.cum_itr_adv = 0
         
@@ -189,7 +192,7 @@ class DANNEngine(ReconstructionEngine):
                                  iterations=steps_per_epoch,
                                  print_interval=5, print_flag=False)
 
-        
+        # TODO: make sure train_f is set to True.
         train_f = True
 
         for self.epoch in range(epochs):
@@ -221,7 +224,6 @@ class DANNEngine(ReconstructionEngine):
                 if not train_f:
                     self.set_requires_grads_for_models(False, False)
 
-                
                 
                 source_iter = iter(source_train_loader)
                 target_iter = iter(target_train_loader)

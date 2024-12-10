@@ -6,7 +6,9 @@ from watchmal.engine.domain_adaptation import DANNEngine
 
 class DANNRegressionEngine(DANNEngine):
     """Engine for performing training or evaluation for a classification network."""
-    def __init__(self, truth_key, model, rank, gpu, dump_path, output_center=0, output_scale=1, pretrained_model_path=None):
+    def __init__(self, truth_key, model, rank, gpu, dump_path, output_center=0,
+                 output_scale=1, pretrained_model_path=None,
+                 domain_pre_train_epochs=2, domain_in_train_itrs=2, max_lammy=1.0):
         """
         Parameters
         ==========
@@ -25,34 +27,41 @@ class DANNRegressionEngine(DANNEngine):
             0 to N).
         """
         # create the directory for saving the log and dump files
-        super().__init__(truth_key, model, rank, gpu, dump_path, pretrained_model_path)
+        super().__init__(truth_key, model, rank, gpu, dump_path, pretrained_model_path,
+                         domain_pre_train_epochs, domain_in_train_itrs, max_lammy)
         self.output_center = output_center
         self.output_scale = output_scale
 
     def forward(self, train=True):
         # training f with GRL
-        label_output, _ = self.module.label_predictor(self.source_data)
-
-        _, features_all = self.module.label_predictor(self.data)
-        features_all = self.module.grl(features_all)
+        _, features = self.module.label_predictor(self.data)
+        features.requires_grad_(True)
+        
         
         with torch.set_grad_enabled(train):
-     
-            lambda_param = 0.3
+            # f loss (predictor loss) based on source data
+            label_output, features_source = self.module.label_predictor(self.source_data)
+            features_source.requires_grad_(True)
 
-            
-            # compute f loss (predictor loss) using data from source dataset
+            # print("label_output", label_output)
+            # print("target", self.target)
+
+            label_output = label_output.reshape(self.target.shape)
             scaled_label_output = self.scale_values(label_output).float()
             scaled_target = self.scale_values(self.target).float()
+            # print("scaled_label_output", scaled_label_output)
+            # print("scaled_target", scaled_target)
             f_loss = self.criterion(scaled_label_output, scaled_target)
             
-            # compute r loss (domain loss) using data from both source and target datasets
-            domain_output = self.module.domain_classifier(features_all)
+            # r loss (domain loss) based on both data
+            reverse_features = self.grl(features)
+            domain_output = self.module.domain_classifier(reverse_features)
             # print('domain_output', domain_output)
             domain_labels = torch.cat([torch.zeros(len(self.source_data)), torch.ones(len(self.target_data))]).to(self.device)
             domain_labels = domain_labels.view(-1, 1).float()    
             domain_loss = self.domain_criterion(domain_output, domain_labels)
             
+            # domain accuracy
             # predicted_domains = torch.argmax(domain_output, dim=-1)
             predicted_domains = (domain_output > 0).float()
             domain_accuracy = (predicted_domains == domain_labels).sum() / float(predicted_domains.nelement())
@@ -60,7 +69,12 @@ class DANNRegressionEngine(DANNEngine):
             # print("predicted_domains", predicted_domains)
             # print("domain acc from forward", domain_accuracy)
 
-            self.loss = f_loss - lambda_param * domain_loss
+            # total loss
+            lammy = self.max_lammy * min(1.0, max(0.7, (self.epoch+1) / self.total_epochs))
+            self.loss = f_loss - lammy * domain_loss
+
+            # print("f_loss", f_loss.item())
+            
             outputs = {"predicted_"+self.truth_key: label_output}
             metrics = {
                 'loss': self.loss.item(),

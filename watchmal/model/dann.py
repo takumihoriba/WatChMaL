@@ -51,7 +51,7 @@ class LabelPredictor(nn.Module):
 
 
 class FlexibleNNClassifier(nn.Module):
-    def __init__(self, input_dim, hidden_dims, output_dim=2, dropout_p=0.2):
+    def __init__(self, input_dim, hidden_dims=None, output_dim=2, dropout_p=0.2):
         """
         Initialize the FlexibleNNClassifier.
         
